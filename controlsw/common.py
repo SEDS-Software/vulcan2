@@ -43,7 +43,18 @@ class Valve(object):
         if self.control is None:
             return
 
-        if self.invert:
+        if self.control.detailsLabel:
+            if state is None:
+                s = "-"
+            else:
+                s = "{:d}".format(bool(state))
+            if self.invert:
+                s += " Inv"
+            self.control.detailsLabel.setText("Dev {:#04x}  Ch {:d}  Raw {}".format(self.devid, self.channel, s))
+
+        if state is None:
+            self.control.set_status(None)
+        elif self.invert:
             self.control.set_status('closed' if state else 'open')
         else:
             self.control.set_status('open' if state else 'closed')
@@ -66,7 +77,17 @@ class PT(object):
         if self.control is None:
             return
 
-        self.control.set_value(self.convert_value(value))
+        if self.control.detailsLabel:
+            if value is None:
+                s = "-.----"
+            else:
+                s = "{:1.4f}".format(value)
+            self.control.detailsLabel.setText("Dev {:#04x}  Ch {:d}  Raw {} v".format(self.devid, self.channel, s))
+
+        if value is None:
+            self.control.set_value(None)
+        else:
+            self.control.set_value(self.convert_value(value))
 
 
 class ValveControl(QtWidgets.QGroupBox):
@@ -96,6 +117,10 @@ class ValveControl(QtWidgets.QGroupBox):
         self.statusLabel.setStyleSheet('background-color: silver')
         self.statusLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.hbox1.addWidget(self.statusLabel, 0)
+
+        self.detailsLabel = QtWidgets.QLabel("Dev 0x00  Ch 0  Raw -")
+        self.vbox1.setContentsMargins(16, 16, 16, 8)
+        self.vbox1.addWidget(self.detailsLabel)
 
         self.set_status(None)
 
@@ -147,6 +172,10 @@ class PTControl(QtWidgets.QGroupBox):
         self.statusLabel.setFont(font)
         self.statusLabel.setAlignment(QtCore.Qt.AlignCenter)
         self.vbox1.addWidget(self.statusLabel, 0)
+
+        self.detailsLabel = QtWidgets.QLabel("Dev 0x00  Ch 0  Raw -.---- v")
+        self.vbox1.setContentsMargins(16, 16, 16, 8)
+        self.vbox1.addWidget(self.detailsLabel)
 
         self.set_value(None)
 

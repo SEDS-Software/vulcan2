@@ -218,6 +218,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.pt_controls.append(ptc)
                 self.cols[col].addWidget(ptc)
 
+        for c in self.valves:
+            c.set_state(None)
+        for c in self.pt:
+            c.set_value(None)
+
         self.log_dir = None
         self.serial_log_file = None
         self.pt_log_file = None
