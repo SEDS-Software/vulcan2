@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 
 Copyright (c) 2019 Alex Forencich
