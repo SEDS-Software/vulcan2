@@ -326,12 +326,12 @@ class PTDiagnostics(QtWidgets.QDialog):
         self.set_ch_value(devid, ch, value)
 
 
-class ConnectDialog(QtWidgets.QDialog):
+class ConnectDialogSerial(QtWidgets.QDialog):
     def __init__(self, parent=None):
-        super(ConnectDialog, self).__init__(parent)
+        super(ConnectDialogSerial, self).__init__(parent)
 
-        self.setObjectName("ConnectDialog")
-        self.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Connect", None))
+        self.setObjectName("ConnectDialogSerial")
+        self.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Connect (Serial)", None))
 
         self.vbox1 = QtWidgets.QVBoxLayout(self)
 
@@ -347,7 +347,9 @@ class ConnectDialog(QtWidgets.QDialog):
         self.form1.addRow("Port", self.portCombo)
 
         self.speedCombo = QtWidgets.QComboBox()
-        self.speedCombo.addItems(["115200", "38400", "19200", "9600", "4800", "2400", "1200", "600", "300"])
+        self.speedCombo.addItems(["4000000", "3000000", "2500000", "2000000", "1500000", "1152000", "1000000", "921600",
+            "576000", "500000", "460800", "230400", "115200", "38400", "19200", "9600", "4800", "2400", "1200", "600", "300"])
+        self.speedCombo.setCurrentIndex(12)
         self.form1.addRow("Speed", self.speedCombo)
 
         self.flowCombo = QtWidgets.QComboBox()
@@ -380,4 +382,34 @@ class ConnectDialog(QtWidgets.QDialog):
         import serial.tools.list_ports
         self.portCombo.clear()
         self.portCombo.addItems([comport.device for comport in serial.tools.list_ports.comports()])
+
+
+class ConnectDialogUdp(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super(ConnectDialogUdp, self).__init__(parent)
+
+        self.setObjectName("ConnectDialogUdp")
+        self.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Connect (UDP)", None))
+
+        self.vbox1 = QtWidgets.QVBoxLayout(self)
+
+        self.gboxUdp = QtWidgets.QGroupBox(QtWidgets.QApplication.translate("MainWindow", "UDP", None))
+        self.vbox1.addWidget(self.gboxUdp)
+
+        self.vbox2 = QtWidgets.QHBoxLayout(self.gboxUdp)
+
+        self.form1 = QtWidgets.QFormLayout()
+        self.vbox2.addLayout(self.form1)
+
+        self.host = QtWidgets.QLineEdit("192.168.1.128")
+        self.form1.addRow("Host", self.host)
+
+        self.port = QtWidgets.QLineEdit("14000")
+        self.form1.addRow("Port", self.port)
+
+        self.buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel, QtCore.Qt.Horizontal, self)
+        self.vbox1.addWidget(self.buttonBox)
+
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
 

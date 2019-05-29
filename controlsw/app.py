@@ -40,7 +40,7 @@ import time
 from functools import partial
 
 import interface, packet
-from common import Valve, PT, ValveControl, PTControl, DIODiagnostics, PTDiagnostics, ConnectDialog
+from common import Valve, PT, ValveControl, PTControl, DIODiagnostics, PTDiagnostics, ConnectDialogSerial
 
 __version__ = '0.0.1'
 
@@ -144,7 +144,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.tick)
         self.timer.start(100)
 
-        self.connectDialog = ConnectDialog(self)
+        self.connectDialog = ConnectDialogSerial(self)
 
         self.DIODiagnostics = DIODiagnostics(self)
         self.update_dio.connect(self.DIODiagnostics.on_update_dio)
