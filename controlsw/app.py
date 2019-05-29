@@ -56,6 +56,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ini = ini
 
+        self.devid = 0x80
+
         self.pkt_buffer = bytearray()
 
         self.setObjectName("MainWindow")
@@ -170,6 +172,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if config['app'].get('title'):
             self.setWindowTitle(config['app'].get('title'))
+
+        self.devid = config['app'].get('devid', 0x80)
 
         self.valves = []
         self.pt = []
@@ -382,7 +386,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def on_set_dio(self, devid, ch, state):
         if self.interface:
-            self.interface.send(packet.Packet(struct.pack('BB', ch, 1 if state else 0), devid, 0x80, 0x00, 0x11))
+            self.interface.send(packet.Packet(struct.pack('BB', ch, 1 if state else 0), devid, self.devid, 0x00, 0x11))
 
     def serial_log(self, tx, data):
         if self.serial_log_file:
