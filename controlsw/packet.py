@@ -78,7 +78,7 @@ class Packet(object):
 
         self.payload = data[4:-2]
 
-        return crc16.crc16(data[:-2]) == struct.unpack('<H', data[-2:])[0]
+        return crc16.crc16(data) == 0
 
     def __eq__(self, other):
         if isinstance(payload, Packet):
