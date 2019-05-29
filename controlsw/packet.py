@@ -57,6 +57,9 @@ class Packet(object):
 
         if isinstance(payload, Packet):
             self.payload = bytearray(payload.payload)
+            self.dest = payload.dest
+            self.source = payload.source
+            self.flags = payload.flags
             self.ptype = payload.ptype
 
     def build(self):
