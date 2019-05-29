@@ -28,6 +28,7 @@ import socket
 import packet
 
 import cobs
+import xbee
 
 
 class Interface(object):
@@ -97,6 +98,79 @@ class SerialInterface(Interface):
 
             else:
                 return None
+
+
+class XBeeInterface(Interface):
+    def __init__(self, port='/dev/ttyUSB0', baud=115200, timeout=10):
+        self.xbif = xbee.SerialInterface(port, baud, timeout)
+
+    @property
+    def timeout(self):
+        return self.xbif.timeout
+
+    @timeout.setter
+    def timeout(self, value):
+        self.xbif.timeout = value
+
+    @property
+    def port(self):
+        return self.xbif.port
+
+    @port.setter
+    def port(self, value):
+        self.xbif.port = value
+
+    @property
+    def serial_port(self):
+        return self.xbif.serial_port
+
+    @serial_port.setter
+    def serial_port(self, value):
+        self.xbif.serial_port = value
+
+    @property
+    def raw_log_callback(self):
+        return self.xbif.raw_log_callback
+
+    @raw_log_callback.setter
+    def raw_log_callback(self, value):
+        self.xbif.raw_log_callback = value
+
+    def send(self, pkt):
+        txrq = xbee.TxRequestPacket()
+        txrq.dest_addr = 0xffff
+        txrq.data = pkt.build()
+        txrq.build()
+        print(txrq)
+        self.xbif.send(txrq)
+
+    def receive(self):
+        xbpkt = self.xbif.receive()
+
+        if xbpkt is None or not isinstance(xbpkt, xbee.RxPacket):
+            return None
+
+        pkt = packet.parse(xbpkt.data)
+
+        if pkt is not None:
+            return pkt
+
+        return None
+
+    def poll(self):
+        while True:
+            xbpkt = self.xbif.poll()
+
+            if xbpkt is None:
+                return None
+
+            if not isinstance(xbpkt, xbee.RxPacket):
+                continue
+
+            pkt = packet.parse(xbpkt.data)
+
+            if pkt is not None:
+                return pkt
 
 
 class UDPInterface(Interface):
