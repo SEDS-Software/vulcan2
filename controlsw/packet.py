@@ -21,8 +21,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 """
-
+import array
 import struct
+import sys
 
 import crc16
 
@@ -42,7 +43,9 @@ def parse(data):
         return None
 
     if pkt.ptype in packet_types:
-        return packet_types[pkt.ptype](pkt)
+        pkt = packet_types[pkt.ptype](pkt)
+        pkt.parse()
+        return pkt
 
     return pkt
 
@@ -108,4 +111,51 @@ class PingResponsePacket(Packet):
         super(PingResponsePacket, self).__init__(payload, dest, source, flags, ptype)
 
 register(PingResponsePacket, 0xff)
+
+
+class DIOStatePacket(Packet):
+    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x10):
+        super(DIOStatePacket, self).__init__(payload, dest, source, flags, ptype)
+
+        self.state = 0
+        self.width = 2
+
+    def build(self):
+        self.payload = self.state.to_bytes(self.width, 'little')
+
+        return super(DIOStatusPacket, self).build()
+
+    def parse(self, data=None):
+        if data is not None:
+            super(DIOStatusPacket, self).parse(data)
+
+        self.width = len(self.payload)
+        self.state = int.from_bytes(self.payload, 'little')
+
+register(DIOStatePacket, 0x10)
+
+
+class PTReadingPacket(Packet):
+    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x20):
+        super(PTReadingPacket, self).__init__(payload, dest, source, flags, ptype)
+
+        self.values = [0]
+
+    def build(self):
+        a = array.array('H', list(self.values))
+        if sys.byteorder == 'big':
+            a.byteswap()
+        self.payload = a.tobytes()
+
+        return super(DIOStatusPacket, self).build()
+
+    def parse(self, data=None):
+        if data is not None:
+            super(DIOStatusPacket, self).parse(data)
+
+        self.values = array.array('H', self.payload)
+        if sys.byteorder == 'big':
+            self.values.byteswap()
+
+register(PTReadingPacket, 0x20)
 
