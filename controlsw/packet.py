@@ -123,11 +123,11 @@ class DIOStatePacket(Packet):
     def build(self):
         self.payload = self.state.to_bytes(self.width, 'little')
 
-        return super(DIOStatusPacket, self).build()
+        return super(DIOStatePacket, self).build()
 
     def parse(self, data=None):
         if data is not None:
-            super(DIOStatusPacket, self).parse(data)
+            super(DIOStatePacket, self).parse(data)
 
         self.width = len(self.payload)
         self.state = int.from_bytes(self.payload, 'little')
@@ -147,11 +147,11 @@ class PTReadingPacket(Packet):
             a.byteswap()
         self.payload = a.tobytes()
 
-        return super(DIOStatusPacket, self).build()
+        return super(PTReadingPacket, self).build()
 
     def parse(self, data=None):
         if data is not None:
-            super(DIOStatusPacket, self).parse(data)
+            super(PTReadingPacket, self).parse(data)
 
         self.values = array.array('H', self.payload)
         if sys.byteorder == 'big':
