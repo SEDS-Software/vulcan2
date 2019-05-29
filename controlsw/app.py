@@ -92,6 +92,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.actionLogDir = QtWidgets.QAction(self)
         self.actionLogDir.setObjectName("actionLogDir")
+        self.actionLogDir.setIcon(QtGui.QIcon.fromTheme("document-save"))
         self.actionLogDir.setText(QtWidgets.QApplication.translate("MainWindow", "&Log Directory", None))
         self.actionLogDir.triggered.connect(self.do_set_log_dir)
         self.menuFile.addAction(self.actionLogDir)
