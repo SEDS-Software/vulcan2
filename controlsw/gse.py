@@ -289,7 +289,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
                 self.statusResource.setText(self.interface.port)
 
-                self.interface.serial_port.timeout = 0
+                self.interface.raw_log_callback = self.serial_log
             except:
                 self.interface = None
                 raise
@@ -319,62 +319,47 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.interface:
             self.interface.send(packet.Packet(struct.pack('BB', ch, 1 if state else 0), devid, 0x80, 0x00, 0x11))
 
+    def serial_log(self, tx, data):
+        if self.serial_log_file:
+            self.serial_log_file.write("{} {} {}\n".format(time.time(), 'TX' if tx else 'RX', data.hex()))
+
     def tick(self):
         if self.interface:
             while True:
-                data = self.interface.serial_port.read(1)
-                if len(data) == 0:
+                pkt = self.interface.poll()
+
+                if pkt is None:
                     break
-                if data[0] == 0:
-                    data = interface.cobs.decode(self.pkt_buffer)
-                    self.pkt_buffer = bytearray()
 
-                    if data is None or len(data) < 6:
-                        continue
+                print(pkt)
 
-                    pkt = packet.parse(data)
-                    print(pkt)
+                if isinstance(pkt, packet.DIOStatePacket):
+                    # DIO states
 
-                    if pkt is None:
-                        continue
+                    if self.valve_log_file:
+                        self.valve_log_file.write("{},{},{:#x}\n".format(time.time(), pkt.source, pkt.state))
 
-                    if self.serial_log_file:
-                        self.serial_log_file.write("{} RX {}\n".format(time.time(), data.hex()))
+                    for k in range(16):
+                        self.update_dio.emit(pkt.source, k, pkt.state & 1 << k)
 
-                    if pkt.ptype == 0x10:
-                        # DIO states
-                        val = struct.unpack('<H', pkt.payload)[0]
+                    for v in self.valves:
+                        if v.devid == pkt.source:
+                            v.set_state(pkt.state & (1 << v.channel))
 
-                        if self.valve_log_file:
-                            self.valve_log_file.write("{},{},{:#x}\n".format(time.time(), pkt.source, val))
+                elif isinstance(pkt, packet.PTReadingPacket):
+                    # PT readings
+                    val = [x/10000 for x in pkt.values]
+                    print(val)
 
-                        for k in range(16):
-                            self.update_dio.emit(pkt.source, k, val & 1 << k)
+                    if self.pt_log_file:
+                        self.pt_log_file.write("{},{},{}\n".format(time.time(), pkt.source, ",".join(["{:.4f}".format(x) for x in val])))
 
-                        for v in self.valves:
-                            if v.devid == pkt.source:
-                                v.set_state(val & (1 << v.channel))
-                    elif pkt.ptype == 0x20:
-                        # PT readings
-                        val = array.array('H', pkt.payload)
-                        if sys.byteorder == 'big':
-                            val.byteswap()
-                        val = [x/10000 for x in val]
-                        print(val)
+                    for k in range(len(val)):
+                        self.update_pt.emit(pkt.source, k, val[k])
 
-                        if self.pt_log_file:
-                            self.pt_log_file.write("{},{},{}\n".format(time.time(), pkt.source, ",".join(["{:.4f}".format(x) for x in val])))
-
-                        for k in range(len(val)):
-                            self.update_pt.emit(pkt.source, k, val[k])
-
-                        for pt in self.pt:
-                            if pt.devid == pkt.source:
-                                pt.set_value(val[pt.channel])
-                else:
-                    self.pkt_buffer.extend(data)
-        else:
-            self.pkt_buffer = bytearray()
+                    for pt in self.pt:
+                        if pt.devid == pkt.source:
+                            pt.set_value(val[pt.channel])
 
     def do_about(self):
         QtWidgets.QMessageBox.about(self, "About SEDS Vulcan II Ground Support Equipment",
