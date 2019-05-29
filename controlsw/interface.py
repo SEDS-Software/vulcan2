@@ -32,7 +32,7 @@ import cobs
 
 class Interface(object):
     def __init__(self):
-        pass
+        self.raw_log_callback = None
 
     def send(self, packet):
         raise NotImplementedError()
@@ -60,7 +60,10 @@ class SerialInterface(Interface):
         self.serial_port.timeout = value
 
     def send(self, pkt):
-        self.serial_port.write(cobs.encode(pkt.build())+b'\x00')
+        data = pkt.build()
+        if self.raw_log_callback:
+            self.raw_log_callback(1, data)
+        self.serial_port.write(cobs.encode(data)+b'\x00')
 
     def receive(self):
         while True:
@@ -88,6 +91,8 @@ class SerialInterface(Interface):
                 pkt = packet.parse(data)
 
                 if pkt is not None:
+                    if self.raw_log_callback:
+                        self.raw_log_callback(0, data)
                     return pkt
 
             else:
@@ -114,8 +119,14 @@ class UDPInterface(Interface):
         self.socket.settimeout(value)
 
     def send(self, pkt):
-        self.socket.sendto(pkt.build(), (self.host, self.port))
+        data = pkt.build()
+        if self.raw_log_callback:
+            self.raw_log_callback(1, data)
+        self.socket.sendto(data, (self.host, self.port))
 
     def receive(self):
-        return packet.parse(self.socket.recvfrom(1500)[0])
+        data = self.socket.recvfrom(1500)[0]
+        if self.raw_log_callback:
+            self.raw_log_callback(0, data)
+        return packet.parse(data)
 
