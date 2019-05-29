@@ -101,11 +101,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actionQuit.triggered.connect(QtCore.QCoreApplication.instance().quit)
         self.menuFile.addAction(self.actionQuit)
 
-        self.actionConnect = QtWidgets.QAction(self)
-        self.actionConnect.setObjectName("actionConnect")
-        self.actionConnect.setText(QtWidgets.QApplication.translate("MainWindow", "&Connect", None))
-        self.actionConnect.triggered.connect(self.do_connect)
-        self.menuConfigure.addAction(self.actionConnect)
+        self.actionConnectSerial = QtWidgets.QAction(self)
+        self.actionConnectSerial.setObjectName("actionConnectSerial")
+        self.actionConnectSerial.setText(QtWidgets.QApplication.translate("MainWindow", "&Connect (Serial)", None))
+        self.actionConnectSerial.triggered.connect(self.do_connect_serial)
+        self.menuConfigure.addAction(self.actionConnectSerial)
+
+        self.actionConnectXBee = QtWidgets.QAction(self)
+        self.actionConnectXBee.setObjectName("actionConnectXBee")
+        self.actionConnectXBee.setText(QtWidgets.QApplication.translate("MainWindow", "&Connect (XBee)", None))
+        self.actionConnectXBee.triggered.connect(self.do_connect_xbee)
+        self.menuConfigure.addAction(self.actionConnectXBee)
 
         self.actionDisconnect = QtWidgets.QAction(self)
         self.actionDisconnect.setObjectName("actionDisconnect")
@@ -243,7 +249,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.valve_log_file = open(os.path.join(self.log_dir, "valve.csv"), 'w')
             self.thrust_log_file = open(os.path.join(self.log_dir, "thrust.csv"), 'w')
 
-    def do_connect(self):
+    def do_connect_serial(self):
         res = self.connectDialog.exec()
 
         if res:
@@ -257,6 +263,61 @@ class MainWindow(QtWidgets.QMainWindow):
 
             try:
                 self.interface = interface.SerialInterface(self.connectDialog.portCombo.currentText(), int(self.connectDialog.speedCombo.currentText()))
+
+                if self.connectDialog.flowCombo.currentIndex() == 0:
+                    self.interface.serial_port.xonxoff = False
+                    self.interface.serial_port.rtscts = False
+                elif self.connectDialog.flowCombo.currentIndex() == 1:
+                    self.interface.serial_port.xonxoff = False
+                    self.interface.serial_port.rtscts = True
+                elif self.connectDialog.flowCombo.currentIndex() == 2:
+                    self.interface.serial_port.xonxoff = True
+                    self.interface.serial_port.rtscts = False
+
+                if self.connectDialog.parityCombo.currentIndex() == 0:
+                    self.interface.serial_port.parity = serial.PARITY_NONE
+                elif self.connectDialog.parityCombo.currentIndex() == 1:
+                    self.interface.serial_port.parity = serial.PARITY_EVEN
+                elif self.connectDialog.parityCombo.currentIndex() == 2:
+                    self.interface.serial_port.parity = serial.PARITY_ODD
+
+                if self.connectDialog.bitsCombo.currentIndex() == 0:
+                    self.interface.serial_port.bytesize = serial.FIVEBITS
+                elif self.connectDialog.bitsCombo.currentIndex() == 1:
+                    self.interface.serial_port.bytesize = serial.SIXBITS
+                elif self.connectDialog.bitsCombo.currentIndex() == 2:
+                    self.interface.serial_port.bytesize = serial.SEVENBITS
+                elif self.connectDialog.bitsCombo.currentIndex() == 3:
+                    self.interface.serial_port.bytesize = serial.EIGHTBITS
+
+                if self.connectDialog.stopBitsCombo.currentIndex() == 0:
+                    self.interface.serial_port.stopbits = serial.STOPBITS_ONE
+                elif self.connectDialog.stopBitsCombo.currentIndex() == 1:
+                    self.interface.serial_port.stopbits = serial.STOPBITS_ONE_POINT_FIVE
+                elif self.connectDialog.stopBitsCombo.currentIndex() == 2:
+                    self.interface.serial_port.stopbits = serial.STOPBITS_TWO
+
+                self.statusResource.setText(self.interface.port)
+
+                self.interface.raw_log_callback = self.serial_log
+            except:
+                self.interface = None
+                raise
+
+    def do_connect_xbee(self):
+        res = self.connectDialog.exec()
+
+        if res:
+            self.interface = None
+            self.statusResource.setText("Not connected")
+
+            for v in self.valve_controls:
+                v.set_status(None)
+            for pt in self.pt_controls:
+                pt.set_value(None)
+
+            try:
+                self.interface = interface.XBeeInterface(self.connectDialog.portCombo.currentText(), int(self.connectDialog.speedCombo.currentText()))
 
                 if self.connectDialog.flowCombo.currentIndex() == 0:
                     self.interface.serial_port.xonxoff = False
