@@ -25,17 +25,22 @@ THE SOFTWARE.
 import serial
 import socket
 
+import packet
+
 import cobs
 
 
 class Interface(object):
     def __init__(self):
-        self._root = None
+        pass
 
     def send(self, packet):
         raise NotImplementedError()
 
     def receive(self):
+        raise NotImplementedError()
+
+    def poll(self):
         raise NotImplementedError()
 
 
@@ -44,6 +49,7 @@ class SerialInterface(Interface):
         self.port = port
         self.baud = baud
         self.serial_port = serial.Serial(port, baud, timeout=timeout)
+        self.pkt_buffer = bytearray()
 
     @property
     def timeout(self):
@@ -57,7 +63,35 @@ class SerialInterface(Interface):
         self.serial_port.write(cobs.encode(pkt.build())+b'\x00')
 
     def receive(self):
-        return packet.parse(cobs.decode(self.serial_port.read_until(b'\x00')[:-1]))
+        while True:
+            if self.serial_port.in_waiting > 0:
+                self.pkt_buffer.extend(self.serial_port.read(self.serial_port.in_waiting))
+            if 0 in self.pkt_buffer:
+                pkt = self.poll()
+                if pkt is not None:
+                    return pkt
+            self.pkt_buffer.extend(self.serial_port.read(1))
+
+    def poll(self):
+        if self.serial_port.in_waiting > 0:
+            self.pkt_buffer.extend(self.serial_port.read(self.serial_port.in_waiting))
+
+        while True:
+            if 0 in self.pkt_buffer:
+                index = self.pkt_buffer.index(0)
+                data = cobs.decode(self.pkt_buffer[0:index])
+                del self.pkt_buffer[0:index+1]
+
+                if data is None or len(data) < 6:
+                    continue
+
+                pkt = packet.parse(data)
+
+                if pkt is not None:
+                    return pkt
+
+            else:
+                return None
 
 
 class UDPInterface(Interface):
