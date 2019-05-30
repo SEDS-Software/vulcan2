@@ -173,7 +173,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if config['app'].get('title'):
             self.setWindowTitle(config['app'].get('title'))
 
-        self.devid = config['app'].get('devid', 0x80)
+        self.devid = int(config['app'].get('devid', "0x80"), 0)
 
         self.valves = []
         self.pt = []
