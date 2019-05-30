@@ -421,7 +421,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         if v.devid == pkt.source:
                             v.set_state(pkt.state & (1 << v.channel))
 
-                elif isinstance(pkt, packet.PTReadingPacket):
+                elif isinstance(pkt, packet.AnalogValuePacket):
                     # PT readings
                     val = [x/10000 for x in pkt.values]
                     print(val)

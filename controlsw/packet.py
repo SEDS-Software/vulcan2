@@ -159,27 +159,30 @@ class DIOSetBitPacket(Packet):
 register(DIOSetBitPacket, 0x11)
 
 
-class PTReadingPacket(Packet):
+class AnalogValuePacket(Packet):
     def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x20):
-        super(PTReadingPacket, self).__init__(payload, dest, source, flags, ptype)
+        super(AnalogValuePacket, self).__init__(payload, dest, source, flags, ptype)
 
+        self.bank = 0
+        self.type = 0
         self.values = [0]
 
     def build(self):
         a = array.array('H', list(self.values))
         if sys.byteorder == 'big':
             a.byteswap()
-        self.payload = a.tobytes()
+        self.payload = struct.pack('BB', self.bank, self.type) + a.tobytes()
 
-        return super(PTReadingPacket, self).build()
+        return super(AnalogValuePacket, self).build()
 
     def parse(self, data=None):
         if data is not None:
-            super(PTReadingPacket, self).parse(data)
+            super(AnalogValuePacket, self).parse(data)
 
-        self.values = array.array('H', self.payload)
+        self.bank, self.type = struct.unpack('BB', self.payload[0:2])
+        self.values = array.array('H', self.payload[2:])
         if sys.byteorder == 'big':
             self.values.byteswap()
 
-register(PTReadingPacket, 0x20)
+register(AnalogValuePacket, 0x20)
 
