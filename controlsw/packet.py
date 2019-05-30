@@ -135,6 +135,27 @@ class DIOStatePacket(Packet):
 register(DIOStatePacket, 0x10)
 
 
+class DIOSetBitPacket(Packet):
+    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x11):
+        super(DIOSetBitPacket, self).__init__(payload, dest, source, flags, ptype)
+
+        self.bit = 0
+        self.state = 0
+
+    def build(self):
+        self.payload = struct.pack('BB', self.bit, 1 if self.state else 0)
+
+        return super(DIOSetBitPacket, self).build()
+
+    def parse(self, data=None):
+        if data is not None:
+            super(DIOSetBitPacket, self).parse(data)
+
+        self.bit, self.state = struct.unpack('BB', self.payload)
+
+register(DIOSetBitPacket, 0x11)
+
+
 class PTReadingPacket(Packet):
     def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x20):
         super(PTReadingPacket, self).__init__(payload, dest, source, flags, ptype)
