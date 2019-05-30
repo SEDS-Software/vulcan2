@@ -386,7 +386,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def on_set_dio(self, devid, ch, state):
         if self.interface:
-            self.interface.send(packet.Packet(struct.pack('BB', ch, 1 if state else 0), devid, self.devid, 0x00, 0x11))
+            pkt = packet.DIOSetBitPacket()
+            pkt.dest = devid
+            pkt.source = self.devid
+            pkt.flags = 0
+            pkt.bit = ch
+            pkt.state = state
+            self.interface.send(pkt)
 
     def serial_log(self, tx, data):
         if self.serial_log_file:
