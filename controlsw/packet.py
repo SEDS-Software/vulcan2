@@ -131,7 +131,7 @@ class DIOStatePacket(Packet):
             super(DIOStatePacket, self).parse(data)
 
         self.width = len(self.payload)-1
-        self.bank = struct.unpack('B', self.payload[0:1])[0]
+        self.bank = struct.unpack_from('B', self.payload, 0)[0]
         self.state = int.from_bytes(self.payload[1:], 'little')
 
 register(DIOStatePacket, 0x10)
@@ -179,7 +179,7 @@ class AnalogValuePacket(Packet):
         if data is not None:
             super(AnalogValuePacket, self).parse(data)
 
-        self.bank, self.type = struct.unpack('BB', self.payload[0:2])
+        self.bank, self.type = struct.unpack_from('BB', self.payload, 0)
         self.values = array.array('H', self.payload[2:])
         if sys.byteorder == 'big':
             self.values.byteswap()
