@@ -117,11 +117,12 @@ class DIOStatePacket(Packet):
     def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x10):
         super(DIOStatePacket, self).__init__(payload, dest, source, flags, ptype)
 
+        self.bank = 0
         self.state = 0
         self.width = 2
 
     def build(self):
-        self.payload = self.state.to_bytes(self.width, 'little')
+        self.payload = struct.pack('B', self.bank) + self.state.to_bytes(self.width, 'little')
 
         return super(DIOStatePacket, self).build()
 
@@ -129,8 +130,9 @@ class DIOStatePacket(Packet):
         if data is not None:
             super(DIOStatePacket, self).parse(data)
 
-        self.width = len(self.payload)
-        self.state = int.from_bytes(self.payload, 'little')
+        self.width = len(self.payload)-1
+        self.bank = struct.unpack('B', self.payload[0:1])[0]
+        self.state = int.from_bytes(self.payload[1:], 'little')
 
 register(DIOStatePacket, 0x10)
 
@@ -139,11 +141,12 @@ class DIOSetBitPacket(Packet):
     def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x11):
         super(DIOSetBitPacket, self).__init__(payload, dest, source, flags, ptype)
 
+        self.bank = 0
         self.bit = 0
         self.state = 0
 
     def build(self):
-        self.payload = struct.pack('BB', self.bit, 1 if self.state else 0)
+        self.payload = struct.pack('BBB', self.bank, self.bit, 1 if self.state else 0)
 
         return super(DIOSetBitPacket, self).build()
 
@@ -151,7 +154,7 @@ class DIOSetBitPacket(Packet):
         if data is not None:
             super(DIOSetBitPacket, self).parse(data)
 
-        self.bit, self.state = struct.unpack('BB', self.payload)
+        self.bank, self.bit, self.state = struct.unpack('BBB', self.payload)
 
 register(DIOSetBitPacket, 0x11)
 
