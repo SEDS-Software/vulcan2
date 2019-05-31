@@ -45,10 +45,10 @@ __version__ = '0.0.1'
 
 class MainWindow(QtWidgets.QMainWindow):
 
-    update_dio = QtCore.pyqtSignal(int, int, int)
+    update_dio = QtCore.pyqtSignal(int, int, int, int)
     update_pt = QtCore.pyqtSignal(int, int, float)
 
-    set_dio = QtCore.pyqtSignal(int, int, int)
+    set_dio = QtCore.pyqtSignal(int, int, int, int)
 
     def __init__(self, parent=None, ini="gse.ini"):
         super(MainWindow, self).__init__(parent)
@@ -379,17 +379,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ptDiagnostics.show()
 
     def do_open_valve(self, valve):
-        self.set_dio.emit(valve.devid, valve.channel, 0 if valve.invert else 1)
+        self.set_dio.emit(valve.devid, valve.bank, valve.channel, 0 if valve.invert else 1)
 
     def do_close_valve(self, valve):
-        self.set_dio.emit(valve.devid, valve.channel, 1 if valve.invert else 0)
+        self.set_dio.emit(valve.devid, valve.bank, valve.channel, 1 if valve.invert else 0)
 
-    def on_set_dio(self, devid, ch, state):
+    def on_set_dio(self, devid, bank, ch, state):
         if self.interface:
             pkt = packet.DIOSetBitPacket()
             pkt.dest = devid
             pkt.source = self.devid
             pkt.flags = 0
+            pkt.bank = bank
             pkt.bit = ch
             pkt.state = state
             self.interface.send(pkt)
@@ -415,10 +416,10 @@ class MainWindow(QtWidgets.QMainWindow):
                         self.valve_log_file.write("{},{},{:#x}\n".format(time.time(), pkt.source, pkt.state))
 
                     for k in range(16):
-                        self.update_dio.emit(pkt.source, k, pkt.state & 1 << k)
+                        self.update_dio.emit(pkt.source, pkt.bank, k, pkt.state & 1 << k)
 
                     for v in self.valves:
-                        if v.devid == pkt.source:
+                        if v.devid == pkt.source and v.bank == pkt.bank:
                             v.set_state(pkt.state & (1 << v.channel))
 
                 elif isinstance(pkt, packet.AnalogValuePacket):

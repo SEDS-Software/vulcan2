@@ -35,6 +35,7 @@ class Valve(object):
         self.name = "v"
         self.label = "Valve"
         self.devid = 0x00
+        self.bank = 0
         self.channel = 0
         self.invert = False
         self.control = None
@@ -230,12 +231,12 @@ class DIODiagnostics(QtWidgets.QDialog):
                 self.labels[i].append(l)
 
                 sb = QtWidgets.QPushButton("Set")
-                sb.clicked.connect(partial(self.do_set, i, k))
+                sb.clicked.connect(partial(self.do_set, i, 0, k))
                 self.gls[i].addWidget(sb, k, 1)
                 self.setbuttons[i].append(sb)
 
                 rb = QtWidgets.QPushButton("Reset")
-                rb.clicked.connect(partial(self.do_reset, i, k))
+                rb.clicked.connect(partial(self.do_reset, i, 0, k))
                 self.gls[i].addWidget(rb, k, 2)
                 self.setbuttons[i].append(rb)
 
@@ -247,7 +248,9 @@ class DIODiagnostics(QtWidgets.QDialog):
         self.buttonBox.rejected.connect(self.reject)
         self.vbox1.addWidget(self.buttonBox)
 
-    def set_ch_state(self, devid, ch, state):
+    def set_ch_state(self, devid, bank, ch, state):
+        if bank != 0:
+            return
         if devid not in self.statelabels:
             return
         if ch >= len(self.statelabels[devid]):
@@ -262,14 +265,14 @@ class DIODiagnostics(QtWidgets.QDialog):
             self.statelabels[devid][ch].setText("off")
             self.statelabels[devid][ch].setStyleSheet('background-color: red; color: white')
 
-    def on_update_dio(self, devid, ch, state):
-        self.set_ch_state(devid, ch, state)
+    def on_update_dio(self, devid, bank, ch, state):
+        self.set_ch_state(devid, bank, ch, state)
 
-    def do_set(self, devid, ch):
-        self.set_dio.emit(devid, ch, 1)
+    def do_set(self, devid, bank, ch):
+        self.set_dio.emit(devid, bank, ch, 1)
 
-    def do_reset(self, devid, ch):
-        self.set_dio.emit(devid, ch, 0)
+    def do_reset(self, devid, bank, ch):
+        self.set_dio.emit(devid, bank, ch, 0)
 
 
 class PTDiagnostics(QtWidgets.QDialog):
