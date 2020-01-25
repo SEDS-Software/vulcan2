@@ -48,5 +48,6 @@ struct ms56xx
 uint8_t ms56xx_prom_crc(struct ms56xx *m);
 int ms56xx_check_prom_crc(struct ms56xx *m);
 void ms56xx_convert(struct ms56xx *m, int32_t *p, int32_t *temp);
+void ms56xx_convert_2(struct ms56xx *m, int32_t *p, int32_t *temp);
 
 #endif /* MS56XX_H_ */

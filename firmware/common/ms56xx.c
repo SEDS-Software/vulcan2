@@ -62,3 +62,34 @@ void ms56xx_convert(struct ms56xx *m, int32_t *p, int32_t *temp)
   *p = (((*p * sens) >> 21) - off) >> 15;
 }
 
+void ms56xx_convert_2(struct ms56xx *m, int32_t *p, int32_t *temp)
+{
+  int32_t dt = *temp - ((int32_t)m->c[5] << 8);
+  *temp = 2000 + (((int64_t)dt * (int64_t)m->c[6]) >> 23);
+  int64_t off = ((int64_t)m->c[2] << 17) + (((int64_t)m->c[4] * (int64_t)dt) >> 6);
+  int64_t sens = ((int64_t)m->c[1] << 16) + (((int64_t)m->c[3] * (int64_t)dt) >> 7);
+  
+  if (*temp < 2000)
+  {
+    int32_t t2 = ((int64_t) dt * (int64_t) dt) >> 31;
+    int64_t temp2 = *temp - 2000;
+    temp2 = temp2 * temp2;
+    int64_t off2 = (61 * temp2) >> 4;
+    int64_t sens2 = temp2 << 1;
+
+    if (*temp < -1500)
+    {
+      temp2 = *temp + 1500;
+      temp2 = temp2 * temp2;
+      off2 += 15 * temp2;
+      sens2 += temp2 << 3;
+    }
+
+    *temp -= t2;
+    off -= off2;
+    sens -= sens2;
+  }
+
+  *p = (((*p * sens) >> 21) - off) >> 15;
+}
+
