@@ -1,0 +1,4 @@
+ms56xx.c:10:9:ms56xx_prom_crc	8	static
+ms56xx.c:29:5:ms56xx_check_prom_crc	8	static
+ms56xx.c:34:6:ms56xx_convert_temp	0	static
+ms56xx.c:40:6:ms56xx_convert	28	static
