@@ -56,9 +56,9 @@ class Valve(object):
         if state is None:
             self.control.set_status(None)
         elif self.invert:
-            self.control.set_status('closed' if state else 'open')
+            self.control.set_status(not bool(state))
         else:
-            self.control.set_status('open' if state else 'closed')
+            self.control.set_status(bool(state))
 
 
 class PT(object):
@@ -134,16 +134,16 @@ class ValveControl(QtWidgets.QGroupBox):
 
     def set_status(self, val):
         self.status = val
-        if val == 'open':
-            self.statusLabel.setText("Open")
-            self.statusLabel.setStyleSheet('background-color: green; color: white')
-        elif val == 'closed':
-            self.statusLabel.setText("Closed")
-            self.statusLabel.setStyleSheet('background-color: red; color: white')
-        else:
+        if val is None:
             self.status = None
             self.statusLabel.setText("Unknown")
             self.statusLabel.setStyleSheet('background-color: silver')
+        elif val:
+            self.statusLabel.setText("Open")
+            self.statusLabel.setStyleSheet('background-color: green; color: white')
+        else:
+            self.statusLabel.setText("Closed")
+            self.statusLabel.setStyleSheet('background-color: red; color: white')
 
     def do_open(self):
         pass
