@@ -193,7 +193,7 @@ class PTControl(QtWidgets.QGroupBox):
 
 class DIODiagnostics(QtWidgets.QDialog):
     
-    set_dio = QtCore.pyqtSignal(int, int, int)
+    set_dio = QtCore.pyqtSignal(int, int, int, int)
 
     def __init__(self, parent=None):
         super(DIODiagnostics, self).__init__(parent)
