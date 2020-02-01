@@ -1,2 +1,0 @@
-crc16.c:10:10:crc16_update	0	static
-crc16.c:25:10:crc16_block	16	static
