@@ -51,6 +51,7 @@ class SerialInterface(Interface):
         self.baud = baud
         self.serial_port = serial.Serial(port, baud, timeout=timeout)
         self.pkt_buffer = bytearray()
+        super(SerialInterface, self).__init__()
 
     @property
     def timeout(self):
@@ -103,6 +104,7 @@ class SerialInterface(Interface):
 class XBeeInterface(Interface):
     def __init__(self, port='/dev/ttyUSB0', baud=115200, timeout=10):
         self.xbif = xbee.SerialInterface(port, baud, timeout)
+        super(XBeeInterface, self).__init__()
 
     @property
     def timeout(self):
@@ -183,6 +185,7 @@ class UDPInterface(Interface):
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.socket.settimeout(timeout)
+        super(UDPInterface, self).__init__()
 
     @property
     def timeout(self):
