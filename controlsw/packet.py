@@ -249,3 +249,56 @@ class GpsPositionPacket(Packet):
 
 register(GpsPositionPacket, 0x31)
 
+
+class FlightStatusPacket(Packet):
+    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0xf0):
+        super(FlightStatusPacket, self).__init__(payload, dest, source, flags, ptype)
+
+        self.time = 0
+        self.flight_phase = 0
+        self.status_flags = 0
+        self.baro_pressure = 0
+        self.baro_temperature = 0
+        self.imu_accel = 0
+        self.baro_raw_altitude = 0
+        self.baro_altitude = 0
+        self.baro_pad_altitude = 0
+        self.baro_speed = 0
+        self.imu_speed = 0
+        self.imu_altitude = 0
+
+    def build(self):
+        self.payload = struct.pack('<l', self.time)
+        self.payload += struct.pack('B', self.flight_phase)
+        self.payload += struct.pack('B', self.status_flags)
+        self.payload += struct.pack('<l', self.baro_pressure)
+        self.payload += struct.pack('<l', int(self.baro_temperature*1e2))
+        self.payload += struct.pack('<l', int(self.imu_accel)*1e2)
+        self.payload += struct.pack('<l', int(self.baro_raw_altitude*1e2))
+        self.payload += struct.pack('<l', int(self.baro_altitude*1e2))
+        self.payload += struct.pack('<l', int(self.baro_pad_altitude*1e2))
+        self.payload += struct.pack('<l', int(self.baro_speed*1e2))
+        self.payload += struct.pack('<l', int(self.imu_speed*1e2))
+        self.payload += struct.pack('<l', int(self.imu_altitude*1e2))
+
+        return super(FlightStatusPacket, self).build()
+
+    def parse(self, data=None):
+        if data is not None:
+            super(FlightStatusPacket, self).parse(data)
+
+        self.time = struct.unpack_from('<l', self.payload, 0)[0]
+        self.flight_phase = struct.unpack_from('B', self.payload, 4)[0]
+        self.status_flags = struct.unpack_from('B', self.payload, 5)[0]
+        self.baro_pressure = struct.unpack_from('<l', self.payload, 6)[0]
+        self.baro_temperature = struct.unpack_from('<l', self.payload, 10)[0] / 1e2
+        self.imu_accel = struct.unpack_from('<l', self.payload, 14)[0] / 1e2
+        self.baro_raw_altitude = struct.unpack_from('<l', self.payload, 18)[0] / 1e2
+        self.baro_altitude = struct.unpack_from('<l', self.payload, 22)[0] / 1e2
+        self.baro_pad_altitude = struct.unpack_from('<l', self.payload, 26)[0] / 1e2
+        self.baro_speed = struct.unpack_from('<l', self.payload, 30)[0] / 1e2
+        self.imu_speed = struct.unpack_from('<l', self.payload, 34)[0] / 1e2
+        self.imu_altitude = struct.unpack_from('<l', self.payload, 38)[0] / 1e2
+
+register(FlightStatusPacket, 0xf0)
+
