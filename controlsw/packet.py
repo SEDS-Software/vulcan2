@@ -115,6 +115,28 @@ class PingResponsePacket(Packet):
 register(PingResponsePacket, 0xff)
 
 
+class CommandPacket(Packet):
+    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x08):
+        super(CommandPacket, self).__init__(payload, dest, source, flags, ptype)
+
+        self.cmd = 0
+        self.data = b''
+
+    def build(self):
+        self.payload = struct.pack('<L', self.cmd) + self.data
+
+        return super(CommandPacket, self).build()
+
+    def parse(self, data=None):
+        if data is not None:
+            super(CommandPacket, self).parse(data)
+
+        self.cmd = struct.unpack_from('<L', self.payload, 0)
+        self.data = self.payload[4:]
+
+register(CommandPacket, 0x08)
+
+
 class DIOStatePacket(Packet):
     def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x10):
         super(DIOStatePacket, self).__init__(payload, dest, source, flags, ptype)
