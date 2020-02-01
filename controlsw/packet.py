@@ -21,7 +21,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 """
+
 import array
+import datetime
 import struct
 import sys
 
@@ -185,4 +187,65 @@ class AnalogValuePacket(Packet):
             self.values.byteswap()
 
 register(AnalogValuePacket, 0x20)
+
+
+class GpsPositionPacket(Packet):
+    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x31):
+        super(GpsPositionPacket, self).__init__(payload, dest, source, flags, ptype)
+
+        self.latitude = 0
+        self.longitude = 0
+        self.altitude = 0
+        self.speed = 0
+        self.heading = 0
+        self.satellites = 0
+        self.fix_type = 0
+        self.date = None
+        self.time = None
+        self.hdop = 0
+
+    def build(self):
+        self.payload = struct.pack('<l', int(self.latitude * 1e7))
+        self.payload += struct.pack('<l', int(self.longitude * 1e7))
+        self.payload += struct.pack('<l', int(self.altitude * 1e2))
+        self.payload += struct.pack('<l', int(self.speed * 1e2))
+        self.payload += struct.pack('<l', int(self.heading * 1e2))
+        self.payload += struct.pack('B', self.satellites)
+        self.payload += struct.pack('B', self.fix_type)
+        self.payload += struct.pack('<l', self.date.day * 10000 + self.date.month * 100 + self.date.year % 100)
+        self.payload += struct.pack('<l', self.time.hour * 1000000 + self.time.minute * 10000 + int(self.time.second * 1e2 + self.time.microsecond / 10000))
+        self.payload += struct.pack('<h', int(self.hdop * 1e2))
+
+        return super(GpsPositionPacket, self).build()
+
+    def parse(self, data=None):
+        if data is not None:
+            super(GpsPositionPacket, self).parse(data)
+
+        self.latitude = struct.unpack_from('<l', self.payload, 0)[0] / 1e7
+        self.longitude = struct.unpack_from('<l', self.payload, 4)[0] / 1e7
+        self.altitude = struct.unpack_from('<l', self.payload, 8)[0] / 1e2
+        self.speed = struct.unpack_from('<l', self.payload, 12)[0] / 1e2
+        self.heading = struct.unpack_from('<l', self.payload, 16)[0] / 1e2
+        self.satellites = struct.unpack_from('B', self.payload, 20)[0]
+        self.fix_type = struct.unpack_from('B', self.payload, 21)[0]
+        d = struct.unpack_from('<l', self.payload, 22)[0]
+        day = int(d / 10000) % 100
+        month = int(d / 100) % 100
+        year = d % 100 + 2000
+        try:
+            self.date = datetime.date(year, month, day)
+        except:
+            self.date = None
+        d = struct.unpack_from('<l', self.payload, 26)[0]
+        hour = int(d / 1000000) % 100
+        minute = int(d / 10000) % 100
+        second = d % 10000
+        try:
+            self.time = datetime.time(hour, minute, int(second/100), (second%100) * 10000)
+        except:
+            self.time = None
+        self.hdop = struct.unpack_from('<h', self.payload, 30)[0] / 1e2
+
+register(GpsPositionPacket, 0x31)
 
