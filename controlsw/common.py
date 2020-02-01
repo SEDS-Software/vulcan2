@@ -192,6 +192,31 @@ class PTControl(QtWidgets.QGroupBox):
             self.statusLabel.setStyleSheet('background-color: silver')
 
 
+class CommandControl(QtWidgets.QGroupBox):
+    def __init__(self):
+        self.name = "Command"
+
+        super(CommandControl, self).__init__()
+
+        self.setTitle(QtWidgets.QApplication.translate("MainWindow", "Command", None))
+
+        self.vbox1 = QtWidgets.QVBoxLayout(self)
+
+        self.hbox1 = QtWidgets.QHBoxLayout()
+        self.vbox1.addLayout(self.hbox1)
+
+        self.sendButton = QtWidgets.QPushButton(QtWidgets.QApplication.translate("MainWindow", "Send", None), self)
+        self.hbox1.addWidget(self.sendButton)
+
+        self.detailsLabel = QtWidgets.QLabel("Dev 0x00  Cmd 0x00000000")
+        self.vbox1.setContentsMargins(16, 16, 16, 8)
+        self.vbox1.addWidget(self.detailsLabel)
+
+    def set_name(self, name):
+        self.name = name
+        self.setTitle(name)
+
+
 class FlightComputerStatusControl(QtWidgets.QGroupBox):
     def __init__(self, gps=False):
         self.name = "Flight Computer Status"
