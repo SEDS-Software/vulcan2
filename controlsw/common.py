@@ -29,6 +29,7 @@ import serial
 
 from functools import partial
 
+import packet
 
 class Valve(object):
     def __init__(self):
@@ -189,6 +190,96 @@ class PTControl(QtWidgets.QGroupBox):
             self.val = None
             self.statusLabel.setText(self.unknown_format.format(self.unit))
             self.statusLabel.setStyleSheet('background-color: silver')
+
+
+class FlightComputerStatusControl(QtWidgets.QGroupBox):
+    def __init__(self, gps=False):
+        self.name = "Flight Computer Status"
+        self.devid = 0
+
+        super(FlightComputerStatusControl, self).__init__()
+
+        self.setTitle(QtWidgets.QApplication.translate("MainWindow", "Flight Computer Status", None))
+
+        self.vbox1 = QtWidgets.QVBoxLayout(self)
+
+        self.form = QtWidgets.QFormLayout()
+        self.vbox1.addLayout(self.form)
+
+        self.flight_phase_label = QtWidgets.QLabel("-")
+        self.form.addRow("Flight phase:", self.flight_phase_label)
+        self.arm_status_label = QtWidgets.QLabel("-")
+        self.form.addRow("Arm status:", self.arm_status_label)
+        self.em_status_label = QtWidgets.QLabel("-")
+        self.form.addRow("E-match status:", self.em_status_label)
+        self.log_status_label = QtWidgets.QLabel("- / -")
+        self.form.addRow("Log status:", self.log_status_label)
+
+        self.baro_pressure_label = QtWidgets.QLabel("---- Pa")
+        self.form.addRow("Baro pressure:", self.baro_pressure_label)
+        self.baro_temperature_label = QtWidgets.QLabel("--.-- \N{DEGREE SIGN}C")
+        self.form.addRow("Baro temperature:", self.baro_temperature_label)
+        self.imu_accel_label = QtWidgets.QLabel("--.-- m/s\N{SUPERSCRIPT TWO}")
+        self.form.addRow("IMU accelerometer:", self.imu_accel_label)
+
+        self.baro_altitude_label = QtWidgets.QLabel("---- m")
+        self.form.addRow("Baro altitude:", self.baro_altitude_label)
+        self.baro_pad_altitude_label = QtWidgets.QLabel("---- m")
+        self.form.addRow("Baro pad_altitude:", self.baro_pad_altitude_label)
+        self.baro_speed_label = QtWidgets.QLabel("---- m/s")
+        self.form.addRow("Baro speed:", self.baro_speed_label)
+        self.imu_speed_label = QtWidgets.QLabel("--.-- m/s")
+        self.form.addRow("IMU speed:", self.imu_speed_label)
+        self.imu_altitude_label = QtWidgets.QLabel("--.-- m/s")
+        self.form.addRow("IMU altitude:", self.imu_altitude_label)
+
+        self.gps_lat_label = QtWidgets.QLabel("--.-------\N{DEGREE SIGN} N")
+        self.gps_lon_label = QtWidgets.QLabel("---.-------\N{DEGREE SIGN} E")
+        self.gps_alt_label = QtWidgets.QLabel("---.-- m")
+        if gps:
+            self.form.addRow("GPS Latitude:", self.gps_lat_label)
+            self.form.addRow("GPS Longitude:", self.gps_lon_label)
+            self.form.addRow("GPS Altitude:", self.gps_alt_label)
+
+    def set_name(self, name):
+        self.name = name
+        self.setTitle(name)
+
+    def handle_packet(self, pkt):
+        if pkt.source == self.devid:
+            if isinstance(pkt, packet.DIOStatePacket):
+                pass
+            elif isinstance(pkt, packet.GpsPositionPacket):
+                self.gps_lat_label.setText("{:010.7f}\N{DEGREE SIGN} {}".format(abs(pkt.latitude), 'S' if pkt.latitude < 0 else 'N'))
+                self.gps_lon_label.setText("{:011.7f}\N{DEGREE SIGN} {}".format(abs(pkt.longitude), 'W' if pkt.longitude < 0 else 'E'))
+                self.gps_alt_label.setText("{:0.2f} m".format(pkt.altitude))
+            elif isinstance(pkt, packet.FlightStatusPacket):
+                #self.time
+                if pkt.flight_phase == 0:
+                    self.flight_phase_label.setText("PAD")
+                elif pkt.flight_phase == 1:
+                    self.flight_phase_label.setText("ASCENT 1")
+                elif pkt.flight_phase == 2:
+                    self.flight_phase_label.setText("ASCENT 2")
+                elif pkt.flight_phase == 3:
+                    self.flight_phase_label.setText("ASCENT 3")
+                elif pkt.flight_phase == 4:
+                    self.flight_phase_label.setText("DESCENT 1")
+                elif pkt.flight_phase == 5:
+                    self.flight_phase_label.setText("DESCENT 2")
+                else:
+                    self.flight_phase_label.setText("UNKNOWN")
+                self.arm_status_label.setText("Armed" if pkt.status_flags & (1 << 0) else "Disarmed")
+                self.log_status_label.setText("Good" if pkt.status_flags & (1 << 1) else "Failed")
+                self.em_status_label.setText(("Good" if pkt.status_flags & (1 << 4) else "Bad") + " / " + ("Good" if pkt.status_flags & (1 << 5) else "Bad"))
+                self.baro_pressure_label.setText("{} Pa".format(pkt.baro_pressure))
+                self.baro_temperature_label.setText("{:0.2f} \N{DEGREE SIGN}C".format(pkt.baro_temperature))
+                self.imu_accel_label.setText("{:0.2f} m/s\N{SUPERSCRIPT TWO}".format(pkt.imu_accel))
+                self.baro_altitude_label.setText("{:0.2f} m".format(pkt.baro_altitude))
+                self.baro_pad_altitude_label.setText("{:0.2f} m".format(pkt.baro_pad_altitude))
+                self.baro_speed_label.setText("{:0.2f} m/s".format(pkt.baro_speed))
+                self.imu_speed_label.setText("{:0.2f} m/s".format(pkt.imu_speed))
+                self.imu_altitude_label.setText("{:0.2f} m".format(pkt.imu_altitude))
 
 
 class DIODiagnostics(QtWidgets.QDialog):
