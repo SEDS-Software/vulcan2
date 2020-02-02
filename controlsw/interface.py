@@ -35,6 +35,9 @@ class Interface(object):
     def __init__(self):
         self.raw_log_callback = None
         self.rssi = None
+        self.tx_pkts = 0
+        self.rx_pkts = 0
+        self.rx_errs = 0
 
     def send(self, packet):
         raise NotImplementedError()
@@ -67,6 +70,7 @@ class SerialInterface(Interface):
         if self.raw_log_callback:
             self.raw_log_callback(1, data)
         self.serial_port.write(cobs.encode(data)+b'\x00')
+        self.tx_pkts += 1
 
     def receive(self):
         while True:
@@ -89,6 +93,7 @@ class SerialInterface(Interface):
                 del self.pkt_buffer[0:index+1]
 
                 if data is None or len(data) < 6:
+                    self.rx_errs += 1
                     continue
 
                 pkt = packet.parse(data)
@@ -96,7 +101,10 @@ class SerialInterface(Interface):
                 if pkt is not None:
                     if self.raw_log_callback:
                         self.raw_log_callback(0, data)
+                    self.rx_pkts += 1
                     return pkt
+                else:
+                    self.rx_errs += 1
 
             else:
                 return None
@@ -146,6 +154,7 @@ class XBeeInterface(Interface):
         txrq.build()
         print(txrq)
         self.xbif.send(txrq)
+        self.tx_pkts += 1
 
     def receive(self):
         xbpkt = self.xbif.receive()
@@ -158,7 +167,10 @@ class XBeeInterface(Interface):
         pkt = packet.parse(xbpkt.data)
 
         if pkt is not None:
+            self.rx_pkts += 1
             return pkt
+        else:
+            self.rx_errs += 1
 
         return None
 
@@ -177,7 +189,10 @@ class XBeeInterface(Interface):
             pkt = packet.parse(xbpkt.data)
 
             if pkt is not None:
+                self.rx_pkts += 1
                 return pkt
+            else:
+                self.rx_errs += 1
 
 
 class UDPInterface(Interface):
