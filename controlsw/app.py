@@ -301,7 +301,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 elif self.connectDialog.stopBitsCombo.currentIndex() == 2:
                     self.interface.serial_port.stopbits = serial.STOPBITS_TWO
 
-                self.statusResource.setText(self.interface.port)
+                self.statusResource.setText("{} / TX pkts {} / RX pkts {} / RX errs {}".format(self.interface.port, self.interface.tx_pkts, self.interface.rx_pkts, self.interface.rx_errs))
 
                 self.interface.raw_log_callback = self.serial_log
             except:
@@ -356,7 +356,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 elif self.connectDialog.stopBitsCombo.currentIndex() == 2:
                     self.interface.serial_port.stopbits = serial.STOPBITS_TWO
 
-                self.statusResource.setText(self.interface.port)
+                self.statusResource.setText("{} / TX pkts {} / RX pkts {} / RX errs {} / RSSI {} dBm".format(self.interface.port, self.interface.tx_pkts, self.interface.rx_pkts, self.interface.rx_errs, self.interface.rssi))
 
                 self.interface.raw_log_callback = self.serial_log
             except:
@@ -436,6 +436,11 @@ class MainWindow(QtWidgets.QMainWindow):
                     for pt in self.pt:
                         if pt.devid == pkt.source:
                             pt.set_value(val[pt.channel])
+
+            if isinstance(self.interface, interface.XBeeInterface):
+                self.statusResource.setText("{} / TX pkts {} / RX pkts {} / RX errs {} / RSSI {} dBm".format(self.interface.port, self.interface.tx_pkts, self.interface.rx_pkts, self.interface.rx_errs, self.interface.rssi))
+            else:
+                self.statusResource.setText("{} / TX pkts {} / RX pkts {} / RX errs {}".format(self.interface.port, self.interface.tx_pkts, self.interface.rx_pkts, self.interface.rx_errs))
 
     def do_about(self):
         QtWidgets.QMessageBox.about(self, "About SEDS Vulcan II Control Software",
