@@ -45,6 +45,8 @@ __version__ = '0.0.1'
 
 class MainWindow(QtWidgets.QMainWindow):
 
+    rx_pkt = QtCore.pyqtSignal(packet.Packet)
+
     update_dio = QtCore.pyqtSignal(int, int, int, int)
     update_pt = QtCore.pyqtSignal(int, int, float)
 
@@ -410,6 +412,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     break
 
                 print(pkt)
+
+                self.rx_pkt.emit(pkt)
 
                 if isinstance(pkt, packet.DIOStatePacket):
                     # DIO states
