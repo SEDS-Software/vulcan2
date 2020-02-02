@@ -241,6 +241,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.serial_log_file = None
         self.pt_log_file = None
         self.valve_log_file = None
+        self.gps_log_file = None
         self.thrust_log_file = None
 
     def do_set_log_dir(self):
@@ -251,6 +252,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.serial_log_file = open(os.path.join(self.log_dir, "serial.log"), 'w')
             self.pt_log_file = open(os.path.join(self.log_dir, "pt.csv"), 'w')
             self.valve_log_file = open(os.path.join(self.log_dir, "valve.csv"), 'w')
+            self.gps_log_file = open(os.path.join(self.log_dir, "gps.csv"), 'w')
             self.thrust_log_file = open(os.path.join(self.log_dir, "thrust.csv"), 'w')
 
     def do_connect_serial(self):
@@ -436,6 +438,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     for pt in self.pt:
                         if pt.devid == pkt.source:
                             pt.set_value(val[pt.channel])
+
+                elif isinstance(pkt, packet.GpsPositionPacket):
+                    # GPS position
+
+                    if self.gps_log_file:
+                        self.gps_log_file.write("{},{},{},{},{},{},{},{},{},{},{},{}\n".format(time.time(), pkt.source, pkt.latitude, pkt.longitude, pkt.altitude, pkt.speed, pkt.heading, pkt.satellites, pkt.fix_type, pkt.date, pkt.time, pkt.hdop))
 
             if isinstance(self.interface, interface.XBeeInterface):
                 self.statusResource.setText("{} / TX pkts {} / RX pkts {} / RX errs {} / RSSI {} dBm".format(self.interface.port, self.interface.tx_pkts, self.interface.rx_pkts, self.interface.rx_errs, self.interface.rssi))
