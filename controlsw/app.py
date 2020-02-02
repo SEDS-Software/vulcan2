@@ -39,7 +39,7 @@ import time
 from functools import partial
 
 import interface, packet
-from common import Valve, PT, ValveControl, PTControl, DIODiagnostics, PTDiagnostics, ConnectDialogSerial
+from common import Valve, PT, ValveControl, PTControl, FlightComputerStatusControl, DIODiagnostics, PTDiagnostics, ConnectDialogSerial
 
 __version__ = '0.0.1'
 
@@ -182,6 +182,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.valve_controls = []
         self.pt_controls = []
+        self.fc_controls = []
 
         self.cols = []
 
@@ -233,6 +234,23 @@ class MainWindow(QtWidgets.QMainWindow):
                 pt.control = ptc
                 self.pt_controls.append(ptc)
                 self.cols[col].addWidget(ptc)
+            elif config[s].get('type') == 'flightcomputer':
+
+                col = int(config[s].get('col', 0))
+
+                for k in range(col+1-len(self.cols)):
+                    vb = QtWidgets.QVBoxLayout()
+                    vb.setAlignment(QtCore.Qt.AlignTop)
+                    self.cols.append(vb)
+                    self.hbox1.addLayout(vb)
+
+                fcc = FlightComputerStatusControl(gps=int(config[s].get('gps', 1)))
+                fcc.setTitle(config[s].get('label', "Flight Computer Status"))
+                fcc.devid = int(config[s].get('devid', '0'), 0)
+                self.rx_pkt.connect(fcc.handle_packet)
+                self.fc_controls.append(fcc)
+                self.cols[col].addWidget(fcc)
+
 
         for c in self.valves:
             c.set_state(None)
