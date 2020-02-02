@@ -181,6 +181,10 @@ class PTControl(QtWidgets.QGroupBox):
 
         self.set_value(None)
 
+    def set_name(self, name):
+        self.name = name
+        self.setTitle(name)
+
     def set_value(self, val):
         try:
             self.val = float(val)
