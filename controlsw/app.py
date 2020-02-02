@@ -206,7 +206,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.hbox1.addLayout(vb)
 
                 vc = ValveControl()
-                vc.setTitle(v.label)
+                vc.set_name(v.label)
                 v.control = vc
                 vc.openButton.clicked.connect(partial(self.do_open_valve, v))
                 vc.closeButton.clicked.connect(partial(self.do_close_valve, v))
@@ -231,7 +231,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.hbox1.addLayout(vb)
 
                 ptc = PTControl()
-                ptc.setTitle(pt.label)
+                ptc.set_name(pt.label)
                 pt.control = ptc
                 self.pt_controls.append(ptc)
                 self.cols[col].addWidget(ptc)
@@ -246,7 +246,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.hbox1.addLayout(vb)
 
                 cmdc = CommandControl()
-                cmdc.setTitle(config[s].get('label', "Command"))
+                cmdc.set_name(config[s].get('label', "Command"))
                 cmdc.devid = int(config[s].get('devid', '0'), 0)
                 cmdc.cmd = int(config[s].get('cmd', '0'), 0)
                 cmdc.data = bytes.fromhex(config[s].get('data', ''))
@@ -265,7 +265,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.hbox1.addLayout(vb)
 
                 fcc = FlightComputerStatusControl(gps=int(config[s].get('gps', 1)))
-                fcc.setTitle(config[s].get('label', "Flight Computer Status"))
+                fcc.set_name(config[s].get('label', "Flight Computer Status"))
                 fcc.devid = int(config[s].get('devid', '0'), 0)
                 self.rx_pkt.connect(fcc.handle_packet)
                 self.fc_controls.append(fcc)
