@@ -34,6 +34,7 @@ import xbee
 class Interface(object):
     def __init__(self):
         self.raw_log_callback = None
+        self.rssi = None
 
     def send(self, packet):
         raise NotImplementedError()
@@ -152,6 +153,8 @@ class XBeeInterface(Interface):
         if xbpkt is None or not isinstance(xbpkt, xbee.RxPacket):
             return None
 
+        self.rssi = -xbpkt.rssi
+
         pkt = packet.parse(xbpkt.data)
 
         if pkt is not None:
@@ -168,6 +171,8 @@ class XBeeInterface(Interface):
 
             if not isinstance(xbpkt, xbee.RxPacket):
                 continue
+
+            self.rssi = -xbpkt.rssi
 
             pkt = packet.parse(xbpkt.data)
 
