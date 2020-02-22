@@ -31,6 +31,257 @@ from functools import partial
 
 import packet
 
+class DIOChannel(object):
+    def __init__(self):
+        self.name = "dio"
+        self.label = "DIO channel"
+        self.devid = 0x00
+        self.bank = 0
+        self.channel = 0
+        self.invert = False
+        self.enable_label = "Enable"
+        self.disable_label = "Disable"
+        self.enabled_label = "On"
+        self.disabled_label = "Off"
+        self.raw_value = None
+        self.value = None
+        self.controls = []
+        self.send_pkt = []
+
+    def convert_raw_value(self, value):
+        if value is None:
+            return None
+        return (not value) if self.invert else value
+
+    def set_raw_value(self, value):
+        self.raw_value = value
+
+        for c in self.controls:
+            c.set_raw_value(value)
+
+        self.set_value(self.convert_raw_value(value))
+
+    def set_value(self, value):
+        self.value = value
+
+        for c in self.controls:
+            c.set_value(value)
+
+    def command_state(self, value):
+        pkt = packet.DIOSetBitPacket()
+        pkt.dest = self.devid
+        #pkt.source = self.devid
+        pkt.flags = 0
+        pkt.bank = self.bank
+        pkt.bit = self.channel
+        pkt.state = (not value) if self.invert else value
+        self.send_pkt(pkt)
+
+
+class AnalogChannel(object):
+    def __init__(self):
+        self.name = "analog"
+        self.label = "Analog channel"
+        self.devid = 0x00
+        self.bank = 0
+        self.channel = 0
+        self.zero = 0.0
+        self.slope = 1.0
+        self.unit = "V"
+        self.format = "{:6.2f} {}"
+        self.unknown_format = "---.-- {}"
+        self.raw_value = None
+        self.value = None
+        self.controls = []
+
+    def convert_raw_value(self, value):
+        if value is None:
+            return None
+        return (value - self.zero) * self.slope
+
+    def set_raw_value(self, value):
+        self.raw_value = value
+
+        for c in self.controls:
+            c.set_raw_value(value)
+
+        self.set_value(self.convert_raw_value(value))
+
+    def set_value(self, value):
+        self.value = value
+
+        for c in self.controls:
+            c.set_value(value)
+
+
+class DIOInputControl(QtWidgets.QGroupBox):
+    def __init__(self, channel):
+        self.channel = channel
+        self.channel.controls.append(self)
+        self.name = self.channel.label
+
+        super(DIOInputControl, self).__init__()
+
+        self.setTitle(QtWidgets.QApplication.translate("MainWindow", self.name, None))
+
+        self.vbox1 = QtWidgets.QVBoxLayout(self)
+
+        self.statusLabel = QtWidgets.QLabel("Unknown")
+        self.statusLabel.setStyleSheet('background-color: silver')
+        self.statusLabel.setAlignment(QtCore.Qt.AlignCenter)
+        self.statusLabel.setContentsMargins(20, 20, 20, 20)
+        self.vbox1.addWidget(self.statusLabel, 0)
+
+        self.detailsLabel = QtWidgets.QLabel("0x00:0.0  Raw -")
+        self.vbox1.setContentsMargins(16, 16, 16, 8)
+        self.vbox1.addWidget(self.detailsLabel)
+
+        self.set_value(None)
+        self.set_raw_value(None)
+
+    def set_name(self, name):
+        self.name = name
+        self.setTitle(name)
+
+    def set_value(self, val):
+        if val is None:
+            self.statusLabel.setText("Unknown")
+            self.statusLabel.setStyleSheet('background-color: silver')
+        elif val:
+            self.statusLabel.setText("On")
+            self.statusLabel.setStyleSheet('background-color: green; color: white')
+        else:
+            self.statusLabel.setText("Off")
+            self.statusLabel.setStyleSheet('background-color: red; color: white')
+
+    def set_raw_value(self, val):
+        if val is None:
+            s = "-"
+        else:
+            s = "{:d}".format(bool(val))
+        if self.channel.invert:
+            s += " (Inv)"
+        self.detailsLabel.setText("{:#04x}:{:d}.{:d}  Raw: {}".format(self.channel.devid, self.channel.bank, self.channel.channel, s))
+
+
+class DIOOutputControl(QtWidgets.QGroupBox):
+    def __init__(self, channel):
+        self.channel = channel
+        self.channel.controls.append(self)
+        self.name = self.channel.label
+
+        super(DIOOutputControl, self).__init__()
+
+        self.setTitle(QtWidgets.QApplication.translate("MainWindow", self.name, None))
+
+        self.vbox1 = QtWidgets.QVBoxLayout(self)
+
+        self.hbox1 = QtWidgets.QHBoxLayout()
+        self.vbox1.addLayout(self.hbox1)
+
+        self.vbox2 = QtWidgets.QVBoxLayout()
+        self.hbox1.addLayout(self.vbox2)
+
+        self.enableButton = QtWidgets.QPushButton(QtWidgets.QApplication.translate("MainWindow", self.channel.enable_label, None), self)
+        self.enableButton.clicked.connect(self.on_enable_clicked)
+        self.vbox2.addWidget(self.enableButton)
+
+        self.disableButton = QtWidgets.QPushButton(QtWidgets.QApplication.translate("MainWindow", self.channel.disable_label, None), self)
+        self.disableButton.clicked.connect(self.on_disable_clicked)
+        self.vbox2.addWidget(self.disableButton)
+
+        self.statusLabel = QtWidgets.QLabel("Unknown")
+        self.statusLabel.setStyleSheet('background-color: silver')
+        self.statusLabel.setAlignment(QtCore.Qt.AlignCenter)
+        self.statusLabel.setContentsMargins(20, 20, 20, 20)
+        self.hbox1.addWidget(self.statusLabel, 0)
+
+        self.detailsLabel = QtWidgets.QLabel("0x00:0.0  Raw -")
+        self.vbox1.setContentsMargins(16, 16, 16, 8)
+        self.vbox1.addWidget(self.detailsLabel)
+
+        self.set_value(None)
+        self.set_raw_value(None)
+
+    def set_name(self, name):
+        self.name = name
+        self.setTitle(name)
+
+    def set_value(self, val):
+        if val is None:
+            self.statusLabel.setText("Unknown")
+            self.statusLabel.setStyleSheet('background-color: silver')
+        elif val:
+            self.statusLabel.setText(self.channel.enabled_label)
+            self.statusLabel.setStyleSheet('background-color: green; color: white')
+        else:
+            self.statusLabel.setText(self.channel.disabled_label)
+            self.statusLabel.setStyleSheet('background-color: red; color: white')
+
+    def set_raw_value(self, val):
+        if val is None:
+            s = "-"
+        else:
+            s = "{:d}".format(bool(val))
+        if self.channel.invert:
+            s += " (Inv)"
+        self.detailsLabel.setText("{:#04x}:{:d}.{:d}  Raw: {}".format(self.channel.devid, self.channel.bank, self.channel.channel, s))
+
+    def on_enable_clicked(self):
+        self.channel.command_state(1)
+
+    def on_disable_clicked(self):
+        self.channel.command_state(0)
+
+
+class AnalogControl(QtWidgets.QGroupBox):
+    def __init__(self, channel):
+        self.channel = channel
+        self.channel.controls.append(self)
+        self.name = self.channel.label
+
+        super(AnalogControl, self).__init__()
+
+        self.setTitle(QtWidgets.QApplication.translate("MainWindow", self.name, None))
+
+        self.vbox1 = QtWidgets.QVBoxLayout(self)
+
+        self.statusLabel = QtWidgets.QLabel(self.channel.unknown_format.format(self.channel.unit))
+        font = QtGui.QFont("monospace")
+        font.setPointSize(20)
+        font.setStyleHint(QtGui.QFont.TypeWriter)
+        self.statusLabel.setFont(font)
+        self.statusLabel.setAlignment(QtCore.Qt.AlignCenter)
+        self.statusLabel.setContentsMargins(10, 5, 10, 5)
+        self.vbox1.addWidget(self.statusLabel, 0)
+
+        self.detailsLabel = QtWidgets.QLabel("0x00:0.0  Raw: -.---- V")
+        self.vbox1.setContentsMargins(16, 16, 16, 8)
+        self.vbox1.addWidget(self.detailsLabel)
+
+        self.set_value(None)
+        self.set_raw_value(None)
+
+    def set_name(self, name):
+        self.name = name
+        self.setTitle(name)
+
+    def set_value(self, val):
+        try:
+            self.statusLabel.setText(self.channel.format.format(val, self.channel.unit))
+            self.statusLabel.setStyleSheet('')
+        except:
+            self.statusLabel.setText(self.channel.unknown_format.format(self.channel.unit))
+            self.statusLabel.setStyleSheet('background-color: silver')
+
+    def set_raw_value(self, val):
+        if val is None:
+            s = "-.----"
+        else:
+            s = "{:1.4f}".format(val)
+        self.detailsLabel.setText("{:#04x}:{:d}.{:d}  Raw: {} V".format(self.channel.devid, self.channel.bank, self.channel.channel, s))
+
+
 class Valve(object):
     def __init__(self):
         self.name = "v"

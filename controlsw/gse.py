@@ -32,7 +32,7 @@ import app
 
 if __name__ == '__main__':
     application = QtWidgets.QApplication(sys.argv)
-    frame = app.MainWindow(ini="gse.ini")
+    frame = app.MainWindow(ini=["channels.ini", "gse.ini"])
     frame.show()
     sys.exit(application.exec_())
 

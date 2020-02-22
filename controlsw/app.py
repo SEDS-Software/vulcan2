@@ -39,7 +39,7 @@ import time
 from functools import partial
 
 import interface, packet
-from common import Valve, PT, ValveControl, PTControl, CommandControl, FlightComputerStatusControl, DIODiagnostics, PTDiagnostics, ConnectDialogSerial
+from common import DIOChannel, AnalogChannel, DIOInputControl, DIOOutputControl, AnalogControl, CommandControl, FlightComputerStatusControl, DIODiagnostics, PTDiagnostics, ConnectDialogSerial
 
 __version__ = '0.0.1'
 
@@ -48,11 +48,12 @@ class MainWindow(QtWidgets.QMainWindow):
     rx_pkt = QtCore.pyqtSignal(packet.Packet)
 
     update_dio = QtCore.pyqtSignal(int, int, int, int)
+    update_analog = QtCore.pyqtSignal(int, int, int, float)
     update_pt = QtCore.pyqtSignal(int, int, float)
 
     set_dio = QtCore.pyqtSignal(int, int, int, int)
 
-    def __init__(self, parent=None, ini="gse.ini"):
+    def __init__(self, parent=None, ini=["channels.ini", "gse.ini"]):
         super(MainWindow, self).__init__(parent)
 
         self.ini = ini
@@ -177,74 +178,87 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.devid = int(config['app'].get('devid', "0x80"), 0)
 
-        self.valves = []
-        self.pt = []
+        self.dio_channels = {}
+        self.analog_channels = {}
 
-        self.valve_controls = []
-        self.pt_controls = []
+        self.controls = []
+
         self.cmd_controls = []
         self.fc_controls = []
 
         self.cols = []
 
+        # build channel objects
         for s in config.sections():
-            if config[s].get('type') == 'valve':
-                v = Valve()
-                v.name = s
-                v.label = config[s].get('label', "Valve")
-                v.devid = int(config[s].get('devid', '0'), 0)
-                v.channel = int(config[s].get('channel'), 0)
-                v.invert = bool(int(config[s].get('invert'), 0))
-                self.valves.append(v)
+            if config[s].get('type') in ['dio', 'dio_in', 'dio_out', 'valve']:
+                ch = DIOChannel()
+                ch.name = s
+                ch.label = config[s].get('label', s)
+                ch.bank = int(config[s].get('bank', '0'), 0)
+                ch.devid = int(config[s].get('devid', '0'), 0)
+                ch.channel = int(config[s].get('channel'), 0)
+                ch.invert = bool(int(config[s].get('invert'), 0))
+                if config[s].get('type') == 'valve':
+                    ch.enable_label = config[s].get('enable_label', "Open")
+                    ch.disable_label = config[s].get('disable_label', "Close")
+                    ch.enabled_label = config[s].get('enabled_label', "Open")
+                    ch.disabled_label = config[s].get('disabled_label', "Closed")
+                else:
+                    ch.enable_label = config[s].get('enable_label', "Enable")
+                    ch.disable_label = config[s].get('disable_label', "Disable")
+                    ch.enabled_label = config[s].get('enabled_label', "Enabled")
+                    ch.disabled_label = config[s].get('disabled_label', "Disabled")
+                ch.send_pkt = self.send_pkt
+                self.dio_channels[s] = ch
 
-                col = int(config[s].get('col', 0))
+            if config[s].get('type') in ['analog', 'pt']:
+                ch = AnalogChannel()
+                ch.name = s
+                ch.label = config[s].get('label', s)
+                ch.bank = int(config[s].get('bank', '0'), 0)
+                ch.devid = int(config[s].get('devid', '0'), 0)
+                ch.channel = int(config[s].get('channel'), 0)
+                ch.zero = float(config[s].get('zero', 0.0))
+                ch.slope = float(config[s].get('slope', 1.0))
+                if config[s].get('type') == 'pt':
+                    ch.unit = config[s].get('unit', "PSI")
+                else:
+                    ch.unit = config[s].get('unit', "V")
+                ch.format = config[s].get('format', "{:6.2f} {}")
+                ch.unknown_format = config[s].get('unknown_format', "---.-- {}")
+                self.analog_channels[s] = ch
 
-                for k in range(col+1-len(self.cols)):
-                    vb = QtWidgets.QVBoxLayout()
-                    vb.setAlignment(QtCore.Qt.AlignTop)
-                    self.cols.append(vb)
-                    self.hbox1.addLayout(vb)
+        # build UI
+        for s in config.sections():
+            col = int(config[s].get('col', -1))
 
-                vc = ValveControl()
-                vc.set_name(v.label)
-                v.control = vc
-                vc.openButton.clicked.connect(partial(self.do_open_valve, v))
-                vc.closeButton.clicked.connect(partial(self.do_close_valve, v))
-                self.valve_controls.append(vc)
-                self.cols[col].addWidget(vc)
-            elif config[s].get('type') == 'pt':
-                pt = PT()
-                pt.name = s
-                pt.label = config[s].get('label', "PT")
-                pt.devid = int(config[s].get('devid', '0'), 0)
-                pt.channel = int(config[s].get('channel'), 0)
-                pt.zero = float(config[s].get('zero', 0.0))
-                pt.slope = float(config[s].get('slope', 1.0))
-                self.pt.append(pt)
+            if col < 0:
+                continue
 
-                col = int(config[s].get('col', 0))
+            # add columns
+            for k in range(col+1-len(self.cols)):
+                vb = QtWidgets.QVBoxLayout()
+                vb.setAlignment(QtCore.Qt.AlignTop)
+                self.cols.append(vb)
+                self.hbox1.addLayout(vb)
 
-                for k in range(col+1-len(self.cols)):
-                    vb = QtWidgets.QVBoxLayout()
-                    vb.setAlignment(QtCore.Qt.AlignTop)
-                    self.cols.append(vb)
-                    self.hbox1.addLayout(vb)
+            # add control
+            if config[s].get('type') in ['dio', 'dio_out', 'valve']:
+                c = DIOOutputControl(self.dio_channels[s])
+                self.controls.append(c)
+                self.cols[col].addWidget(c)
 
-                ptc = PTControl()
-                ptc.set_name(pt.label)
-                pt.control = ptc
-                self.pt_controls.append(ptc)
-                self.cols[col].addWidget(ptc)
+            elif config[s].get('type') == 'dio_in':
+                c = DIOInputControl(self.dio_channels[s])
+                self.controls.append(c)
+                self.cols[col].addWidget(c)
+
+            elif config[s].get('type') == ['analog', 'pt']:
+                c = AnalogControl(self.analog_channels[s])
+                self.controls.append(c)
+                self.cols[col].addWidget(c)
+
             elif config[s].get('type') == 'cmd':
-
-                col = int(config[s].get('col', 0))
-
-                for k in range(col+1-len(self.cols)):
-                    vb = QtWidgets.QVBoxLayout()
-                    vb.setAlignment(QtCore.Qt.AlignTop)
-                    self.cols.append(vb)
-                    self.hbox1.addLayout(vb)
-
                 cmdc = CommandControl()
                 cmdc.set_name(config[s].get('label', "Command"))
                 cmdc.devid = int(config[s].get('devid', '0'), 0)
@@ -255,15 +269,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.cols[col].addWidget(cmdc)
 
             elif config[s].get('type') == 'flightcomputer':
-
-                col = int(config[s].get('col', 0))
-
-                for k in range(col+1-len(self.cols)):
-                    vb = QtWidgets.QVBoxLayout()
-                    vb.setAlignment(QtCore.Qt.AlignTop)
-                    self.cols.append(vb)
-                    self.hbox1.addLayout(vb)
-
                 fcc = FlightComputerStatusControl(gps=int(config[s].get('gps', 1)))
                 fcc.set_name(config[s].get('label', "Flight Computer Status"))
                 fcc.devid = int(config[s].get('devid', '0'), 0)
@@ -272,10 +277,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.cols[col].addWidget(fcc)
 
 
-        for c in self.valves:
-            c.set_state(None)
-        for c in self.pt:
-            c.set_value(None)
+        for ch in self.dio_channels.values():
+            ch.set_raw_value(None)
+        for ch in self.analog_channels.values():
+            ch.set_raw_value(None)
 
         self.log_dir = None
         self.serial_log_file = None
@@ -302,10 +307,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.interface = None
             self.statusResource.setText("Not connected")
 
-            for v in self.valve_controls:
-                v.set_status(None)
-            for pt in self.pt_controls:
-                pt.set_value(None)
+            for ch in self.dio_channels.values():
+                ch.set_raw_value(None)
+            for ch in self.analog_channels.values():
+                ch.set_raw_value(None)
 
             try:
                 self.interface = interface.SerialInterface(self.connectDialog.portCombo.currentText(), int(self.connectDialog.speedCombo.currentText()))
@@ -357,10 +362,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.interface = None
             self.statusResource.setText("Not connected")
 
-            for v in self.valve_controls:
-                v.set_status(None)
-            for pt in self.pt_controls:
-                pt.set_value(None)
+            for ch in self.dio_channels.values():
+                ch.set_raw_value(None)
+            for ch in self.analog_channels.values():
+                ch.set_raw_value(None)
 
             try:
                 self.interface = interface.XBeeInterface(self.connectDialog.portCombo.currentText(), int(self.connectDialog.speedCombo.currentText()))
@@ -409,10 +414,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.interface = None
         self.statusResource.setText("Not connected")
 
-        for v in self.valve_controls:
-            v.set_status(None)
-        for pt in self.pt_controls:
-            pt.set_value(None)
+        for ch in self.dio_channels.values():
+            ch.set_raw_value(None)
+        for ch in self.analog_channels.values():
+            ch.set_raw_value(None)
 
     def do_dio_diagnostics(self):
         self.DIODiagnostics.show()
@@ -447,6 +452,10 @@ class MainWindow(QtWidgets.QMainWindow):
             pkt.data = data
             self.interface.send(pkt)
 
+    def send_pkt(self, pkt):
+        pkt.source = self.devid
+        self.interface.send(pkt)
+
     def serial_log(self, tx, data):
         if self.serial_log_file:
             self.serial_log_file.write("{} {} {}\n".format(time.time(), 'TX' if tx else 'RX', data.hex()))
@@ -472,9 +481,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     for k in range(16):
                         self.update_dio.emit(pkt.source, pkt.bank, k, pkt.state & 1 << k)
 
-                    for v in self.valves:
-                        if v.devid == pkt.source and v.bank == pkt.bank:
-                            v.set_state(pkt.state & (1 << v.channel))
+                    for ch in self.dio_channels.values():
+                        if ch.devid == pkt.source and ch.bank == pkt.bank:
+                            ch.set_raw_value(pkt.state & (1 << ch.channel))
 
                 elif isinstance(pkt, packet.AnalogValuePacket):
                     # PT readings
@@ -485,11 +494,12 @@ class MainWindow(QtWidgets.QMainWindow):
                         self.pt_log_file.write("{},{},{}\n".format(time.time(), pkt.source, ",".join(["{:.4f}".format(x) for x in val])))
 
                     for k in range(len(val)):
+                        self.update_analog.emit(pkt.source, pkt.bank, k, val[k])
                         self.update_pt.emit(pkt.source, k, val[k])
 
-                    for pt in self.pt:
-                        if pt.devid == pkt.source:
-                            pt.set_value(val[pt.channel])
+                    for ch in self.analog_channels.values():
+                        if ch.devid == pkt.source and ch.bank == pkt.bank:
+                            ch.set_raw_value(val[ch.channel])
 
                 elif isinstance(pkt, packet.GpsPositionPacket):
                     # GPS position
