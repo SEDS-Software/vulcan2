@@ -131,6 +131,9 @@ uint8_t usb_cdc_rx_buffer[128];
 StaticQueue_t usb_cdc_rx_queue;
 QueueHandle_t usb_cdc_rx_queue_handle;
 
+uint8_t usb_cdc_tx_buffer[128];
+int usb_cdc_tx_buffer_ptr = 0;
+
 uint8_t usart3_pkt_buffer[128];
 size_t usart3_pkt_buffer_ptr = 0;
 
@@ -1204,7 +1207,21 @@ void startMessageHandler(void const * argument)
       // USB CDC
       if (msg.tx_mask & MSG_TX_USB)
       {
-        usb_cdc_tx(pkt_buffer_2, len);
+        //usb_cdc_tx(pkt_buffer_2, len);
+        if (usb_cdc_tx_buffer_ptr + len < sizeof(usb_cdc_tx_buffer))
+        {
+          memcpy(usb_cdc_tx_buffer+usb_cdc_tx_buffer_ptr, pkt_buffer_2, len);
+          usb_cdc_tx_buffer_ptr += len;
+        }
+      }
+    }
+
+    // USB CDC
+    if (usb_cdc_tx_buffer_ptr)
+    {
+      if (usb_cdc_tx(usb_cdc_tx_buffer, usb_cdc_tx_buffer_ptr) == 0)
+      {
+        usb_cdc_tx_buffer_ptr = 0;
       }
     }
 
