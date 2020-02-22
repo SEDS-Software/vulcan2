@@ -253,7 +253,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.controls.append(c)
                 self.cols[col].addWidget(c)
 
-            elif config[s].get('type') == ['analog', 'pt']:
+            elif config[s].get('type') in ['analog', 'pt']:
                 c = AnalogControl(self.analog_channels[s])
                 self.controls.append(c)
                 self.cols[col].addWidget(c)
