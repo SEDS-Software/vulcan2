@@ -155,7 +155,7 @@ QueueHandle_t tx_msg_queue_handle;
 
 uint16_t adc_dma_buffer[16];
 
-uint16_t solenoid_state = 0;
+uint16_t solenoid_state = 0x8000;
 
 uint8_t arm_state = 0;
 uint8_t fire_cmd = 0;
@@ -367,7 +367,6 @@ int main(void)
   HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buffer, 9);
 
 
-  HAL_GPIO_WritePin(GPIOE, V2_PWR_EN_Pin, GPIO_PIN_SET);
 
   /* USER CODE END 2 */
 
@@ -868,6 +867,8 @@ void StartDefaultTask(void const * argument)
     HAL_GPIO_WritePin(S_CTL_10_GPIO_Port, S_CTL_10_Pin, solenoid_state & (1 << 9) ? GPIO_PIN_SET : GPIO_PIN_RESET);
     HAL_GPIO_WritePin(S_CTL_11_GPIO_Port, S_CTL_11_Pin, solenoid_state & (1 << 10) ? GPIO_PIN_SET : GPIO_PIN_RESET);
     HAL_GPIO_WritePin(S_CTL_12_GPIO_Port, S_CTL_12_Pin, solenoid_state & (1 << 11) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+
+    HAL_GPIO_WritePin(V2_PWR_EN_Port, V2_PWR_EN_Pin, solenoid_state & (1 << 15) ? GPIO_PIN_SET : GPIO_PIN_SET);
 
     // e-match logic
     if (fire_cmd)
