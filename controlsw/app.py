@@ -450,8 +450,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.interface.send(pkt)
 
     def send_pkt(self, pkt):
-        pkt.source = self.devid
-        self.interface.send(pkt)
+        if self.interface:
+            pkt.source = self.devid
+            self.interface.send(pkt)
 
     def serial_log(self, tx, data):
         if self.serial_log_file:
