@@ -883,11 +883,11 @@ void StartDefaultTask(void const * argument)
         HAL_GPIO_WritePin(EM_MAIN_GO_GPIO_Port, EM_MAIN_GO_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(EM_BACK_GO_GPIO_Port, EM_BACK_GO_Pin, GPIO_PIN_SET);
 
-        fire_release_time = osKernelSysTick() + 10000;
+        fire_release_time = osKernelSysTick() + 3000;
       }
     }
 
-    if (fire_release_time <= osKernelSysTick())
+    if (!arm_state || !HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin) || fire_release_time <= osKernelSysTick())
     {
       HAL_GPIO_WritePin(EM_MAIN_GO_GPIO_Port, EM_MAIN_GO_Pin, GPIO_PIN_RESET);
       HAL_GPIO_WritePin(EM_BACK_GO_GPIO_Port, EM_BACK_GO_Pin, GPIO_PIN_RESET);
