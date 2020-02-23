@@ -242,36 +242,41 @@ class MainWindow(QtWidgets.QMainWindow):
             # add control
             if config[s].get('type') in ['dio', 'dio_out', 'valve']:
                 c = DIOOutputControl(self.dio_channels[s])
+                c.sizePolicy().setHorizontalStretch(1)
                 self.controls.append(c)
                 self.cols[col].addWidget(c)
 
             elif config[s].get('type') == 'dio_in':
                 c = DIOInputControl(self.dio_channels[s])
+                c.sizePolicy().setHorizontalStretch(1)
                 self.controls.append(c)
                 self.cols[col].addWidget(c)
 
             elif config[s].get('type') in ['analog', 'pt']:
                 c = AnalogControl(self.analog_channels[s])
+                c.sizePolicy().setHorizontalStretch(1)
                 self.controls.append(c)
                 self.cols[col].addWidget(c)
 
             elif config[s].get('type') == 'cmd':
-                cmdc = CommandControl()
-                cmdc.set_name(config[s].get('label', "Command"))
-                cmdc.devid = int(config[s].get('devid', '0'), 0)
-                cmdc.cmd = int(config[s].get('cmd', '0'), 0)
-                cmdc.data = bytes.fromhex(config[s].get('data', ''))
-                cmdc.sendButton.clicked.connect(partial(self.do_send_cmd, int(config[s].get('devid', '0'), 0), int(config[s].get('cmd', '0'), 0), bytes.fromhex(config[s].get('data', ''))))
-                self.controls.append(cmdc)
-                self.cols[col].addWidget(cmdc)
+                c = CommandControl()
+                c.sizePolicy().setHorizontalStretch(1)
+                c.set_name(config[s].get('label', "Command"))
+                c.devid = int(config[s].get('devid', '0'), 0)
+                c.cmd = int(config[s].get('cmd', '0'), 0)
+                c.data = bytes.fromhex(config[s].get('data', ''))
+                c.sendButton.clicked.connect(partial(self.do_send_cmd, int(config[s].get('devid', '0'), 0), int(config[s].get('cmd', '0'), 0), bytes.fromhex(config[s].get('data', ''))))
+                self.controls.append(c)
+                self.cols[col].addWidget(c)
 
             elif config[s].get('type') == 'flightcomputer':
-                fcc = FlightComputerStatusControl(gps=int(config[s].get('gps', 1)))
-                fcc.set_name(config[s].get('label', "Flight Computer Status"))
-                fcc.devid = int(config[s].get('devid', '0'), 0)
-                self.rx_pkt.connect(fcc.handle_packet)
-                self.controls.append(fcc)
-                self.cols[col].addWidget(fcc)
+                c = FlightComputerStatusControl(gps=int(config[s].get('gps', 1)))
+                c.sizePolicy().setHorizontalStretch(1)
+                c.set_name(config[s].get('label', "Flight Computer Status"))
+                c.devid = int(config[s].get('devid', '0'), 0)
+                self.rx_pkt.connect(c.handle_packet)
+                self.controls.append(c)
+                self.cols[col].addWidget(c)
 
 
         for ch in self.dio_channels.values():
