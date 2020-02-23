@@ -509,9 +509,9 @@ class FlightComputerStatusControl(QtWidgets.QGroupBox):
         self.form.addRow("Flight phase:", self.flight_phase_label)
         self.arm_status_label = QtWidgets.QLabel("-")
         self.form.addRow("Arm status:", self.arm_status_label)
-        self.em_status_label = QtWidgets.QLabel("-")
+        self.em_status_label = QtWidgets.QLabel("- / -")
         self.form.addRow("E-match status:", self.em_status_label)
-        self.log_status_label = QtWidgets.QLabel("- / -")
+        self.log_status_label = QtWidgets.QLabel("-")
         self.form.addRow("Log status:", self.log_status_label)
 
         self.baro_pressure_label = QtWidgets.QLabel("---- Pa")
