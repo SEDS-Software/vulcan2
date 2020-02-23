@@ -39,7 +39,7 @@ import time
 from functools import partial
 
 import interface, packet
-from common import DIOChannel, AnalogChannel, DIOInputControl, DIOOutputControl, AnalogControl, CommandControl, FlightComputerStatusControl, DIODiagnostics, PTDiagnostics, ConnectDialogSerial
+from common import DIOChannel, AnalogChannel, DIOInputControl, DIOOutputControl, AnalogControl, CommandControl, FlightComputerStatusControl, LaunchSequenceControl, DIODiagnostics, PTDiagnostics, ConnectDialogSerial
 
 __version__ = '0.0.1'
 
@@ -276,6 +276,15 @@ class MainWindow(QtWidgets.QMainWindow):
                 c.sizePolicy().setHorizontalStretch(1)
                 c.set_name(config[s].get('label', "Flight Computer Status"))
                 c.devid = int(config[s].get('devid', '0'), 0)
+                self.rx_pkt.connect(c.handle_packet)
+                self.controls.append(c)
+                self.cols[col].addWidget(c)
+
+            elif config[s].get('type') == 'launchsequence':
+                c = LaunchSequenceControl(self)
+                c.sizePolicy().setHorizontalStretch(1)
+                c.set_name(config[s].get('label', "Launch"))
+                c.devid = int(config[s].get('devid', str(self.devid)), 0)
                 self.rx_pkt.connect(c.handle_packet)
                 self.controls.append(c)
                 self.cols[col].addWidget(c)

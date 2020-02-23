@@ -25,6 +25,7 @@ THE SOFTWARE.
 import PyQt5
 from PyQt5 import Qt, QtCore, QtGui, QtWidgets
 
+import math
 import serial
 import time
 
@@ -579,6 +580,110 @@ class FlightComputerStatusControl(QtWidgets.QGroupBox):
                 self.baro_speed_label.setText("{:0.2f} m/s".format(pkt.baro_speed))
                 self.imu_speed_label.setText("{:0.2f} m/s".format(pkt.imu_speed))
                 self.imu_altitude_label.setText("{:0.2f} m".format(pkt.imu_altitude))
+
+
+class LaunchSequenceControl(QtWidgets.QGroupBox):
+    def __init__(self, parent):
+        self.name = "Launch Sequence"
+        self.devid = 0
+
+        self.dio_channels = parent.dio_channels
+        self.send_pkt = parent.send_pkt
+
+        self.key_status = False
+        self.arm_status = False
+        self.t0_time = 0
+        self.t0 = -10
+        self.t = self.t0
+        self.em_fired = False
+        self.mvasa_opened = False
+
+        super(LaunchSequenceControl, self).__init__()
+
+        self.setTitle(QtWidgets.QApplication.translate("MainWindow", "Launch Sequence", None))
+
+        self.vbox1 = QtWidgets.QVBoxLayout(self)
+
+        self.form = QtWidgets.QFormLayout()
+        self.vbox1.addLayout(self.form)
+
+        self.arming_status_label = QtWidgets.QLabel("-")
+        self.form.addRow("Arming status:", self.arming_status_label)
+        self.em_status_label = QtWidgets.QLabel("- / -")
+        self.form.addRow("E-match status:", self.em_status_label)
+        self.sequence_status_label = QtWidgets.QLabel("DISABLED")
+        self.form.addRow("Sequence status:", self.sequence_status_label)
+        self.sequence_time_label = QtWidgets.QLabel("T-00:10")
+        self.form.addRow("Sequence time:", self.sequence_time_label)
+
+        self.start_button = QtWidgets.QPushButton(QtWidgets.QApplication.translate("MainWindow", "Start sequence", None), self)
+        self.start_button.setEnabled(False)
+        self.start_button.clicked.connect(self.on_start_clicked)
+        self.vbox1.addWidget(self.start_button)
+
+    def set_name(self, name):
+        self.name = name
+        self.setTitle(name)
+
+    def handle_packet(self, pkt):
+        if pkt.source == self.devid:
+            if isinstance(pkt, packet.DIOStatePacket):
+                if pkt.bank == 1:
+                    self.key_status = pkt.state & (1 << 4)
+                    self.arm_status = pkt.state & (1 << 8)
+                    self.em_status_label.setText(("Good" if pkt.state & (1 << 0) else "Bad") + " / " + ("Good" if pkt.state & (1 << 1) else "Bad"))
+
+    def on_start_clicked(self):
+        self.t0_time = time.time() - self.t0
+
+    def tick(self):
+        if self.key_status and self.arm_status:
+            self.arming_status_label.setText("ARMED")
+
+            if self.t0_time > 0:
+                self.sequence_status_label.setText("RUNNING")
+                self.start_button.setEnabled(False)
+
+                self.t = time.time() - self.t0_time
+
+                if self.t >= -5:
+                    # fire E-match
+                    self.sequence_status_label.setText("EMATCH")
+                    if not self.em_fired:
+                        self.em_fired = True
+                        pkt = packet.CommandPacket()
+                        pkt.dest = self.devid
+                        pkt.flags = 0
+                        pkt.cmd = 0x004001f0
+                        pkt.data = b'\x00'
+                        self.send_pkt(pkt)
+
+                if self.t >= 0:
+                    # open MVASA
+                    self.sequence_status_label.setText("MVASA")
+                    if not self.mvasa_opened:
+                        self.mvasa_opened = True
+                        self.dio_channels['v_gse_mvasa'].command_state(True)
+            else:
+                self.sequence_status_label.setText("READY")
+                self.start_button.setEnabled(True)
+
+        else:
+            if self.key_status:
+                self.arming_status_label.setText("DISARMED")
+            else:
+                self.arming_status_label.setText("LOCKOUT")
+            self.sequence_status_label.setText("DISABLED")
+            self.start_button.setEnabled(False)
+            self.t0_time = 0
+            self.em_fired = False
+            self.mvasa_opened = False
+
+        s = math.floor(self.t)
+        if s < 0:
+            self.sequence_time_label.setText("T-{:02d}:{:02d}".format(int((-s)/60), int((-s)%60)))
+        else:
+            self.sequence_time_label.setText("T+{:02d}:{:02d}".format(int(s/60), int(s%60)))
 
 
 class DIODiagnostics(QtWidgets.QDialog):
