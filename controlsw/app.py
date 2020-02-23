@@ -205,6 +205,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     ch.disable_label = config[s].get('disable_label', "Disable")
                     ch.enabled_label = config[s].get('enabled_label', "Enabled")
                     ch.disabled_label = config[s].get('disabled_label', "Disabled")
+                ch.timeout = float(config[s].get('timeout', 1.0))
                 ch.send_pkt = self.send_pkt
                 self.dio_channels[s] = ch
 
@@ -223,6 +224,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     ch.unit = config[s].get('unit', "V")
                 ch.format = config[s].get('format', "{:6.2f} {}")
                 ch.unknown_format = config[s].get('unknown_format', "---.-- {}")
+                ch.timeout = float(config[s].get('timeout', 1.0))
                 self.analog_channels[s] = ch
 
         # build UI
@@ -514,6 +516,18 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.statusResource.setText("{} / TX pkts {} / RX pkts {} / RX errs {} / RSSI {} dBm".format(self.interface.port, self.interface.tx_pkts, self.interface.rx_pkts, self.interface.rx_errs, self.interface.rssi))
             else:
                 self.statusResource.setText("{} / TX pkts {} / RX pkts {} / RX errs {}".format(self.interface.port, self.interface.tx_pkts, self.interface.rx_pkts, self.interface.rx_errs))
+
+        for c in self.dio_channels.values():
+            if hasattr(c, 'tick'):
+                c.tick()
+
+        for c in self.analog_channels.values():
+            if hasattr(c, 'tick'):
+                c.tick()
+
+        for c in self.controls:
+            if hasattr(c, 'tick'):
+                c.tick()
 
     def do_about(self):
         QtWidgets.QMessageBox.about(self, "About SEDS Vulcan II Control Software",

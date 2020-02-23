@@ -26,6 +26,7 @@ import PyQt5
 from PyQt5 import Qt, QtCore, QtGui, QtWidgets
 
 import serial
+import time
 
 from functools import partial
 
@@ -45,6 +46,8 @@ class DIOChannel(object):
         self.disabled_label = "Off"
         self.raw_value = None
         self.value = None
+        self.timeout = 1.0
+        self.timeout_limit = 0
         self.controls = []
         self.send_pkt = []
 
@@ -55,6 +58,9 @@ class DIOChannel(object):
 
     def set_raw_value(self, value):
         self.raw_value = value
+
+        if value is not None and self.timeout > 0:
+            self.timeout_limit = time.time() + self.timeout
 
         for c in self.controls:
             c.set_raw_value(value)
@@ -77,6 +83,10 @@ class DIOChannel(object):
         pkt.state = (not value) if self.invert else value
         self.send_pkt(pkt)
 
+    def tick(self):
+        if self.timeout_limit and self.timeout_limit < time.time():
+            self.set_raw_value(None)
+
 
 class AnalogChannel(object):
     def __init__(self):
@@ -92,6 +102,8 @@ class AnalogChannel(object):
         self.unknown_format = "---.-- {}"
         self.raw_value = None
         self.value = None
+        self.timeout = 1.0
+        self.timeout_limit = 0
         self.controls = []
 
     def convert_raw_value(self, value):
@@ -101,6 +113,9 @@ class AnalogChannel(object):
 
     def set_raw_value(self, value):
         self.raw_value = value
+
+        if value is not None and self.timeout > 0:
+            self.timeout_limit = time.time() + self.timeout
 
         for c in self.controls:
             c.set_raw_value(value)
@@ -112,6 +127,10 @@ class AnalogChannel(object):
 
         for c in self.controls:
             c.set_value(value)
+
+    def tick(self):
+        if self.timeout_limit and self.timeout_limit < time.time():
+            self.set_raw_value(None)
 
 
 class DIOInputControl(QtWidgets.QGroupBox):
