@@ -871,7 +871,7 @@ void StartDefaultTask(void const * argument)
     HAL_GPIO_WritePin(S_CTL_11_GPIO_Port, S_CTL_11_Pin, solenoid_state & (1 << 10) ? GPIO_PIN_SET : GPIO_PIN_RESET);
     HAL_GPIO_WritePin(S_CTL_12_GPIO_Port, S_CTL_12_Pin, solenoid_state & (1 << 11) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 
-    HAL_GPIO_WritePin(V2_PWR_EN_Port, V2_PWR_EN_Pin, solenoid_state & (1 << 15) ? GPIO_PIN_SET : GPIO_PIN_SET);
+    HAL_GPIO_WritePin(V2_PWR_EN_GPIO_Port, V2_PWR_EN_Pin, solenoid_state & (1 << 15) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 
     // e-match logic
     if (fire_cmd)
