@@ -183,9 +183,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.controls = []
 
-        self.cmd_controls = []
-        self.fc_controls = []
-
         self.cols = []
 
         # build channel objects
@@ -265,7 +262,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 cmdc.cmd = int(config[s].get('cmd', '0'), 0)
                 cmdc.data = bytes.fromhex(config[s].get('data', ''))
                 cmdc.sendButton.clicked.connect(partial(self.do_send_cmd, int(config[s].get('devid', '0'), 0), int(config[s].get('cmd', '0'), 0), bytes.fromhex(config[s].get('data', ''))))
-                self.cmd_controls.append(cmdc)
+                self.controls.append(cmdc)
                 self.cols[col].addWidget(cmdc)
 
             elif config[s].get('type') == 'flightcomputer':
@@ -273,7 +270,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 fcc.set_name(config[s].get('label', "Flight Computer Status"))
                 fcc.devid = int(config[s].get('devid', '0'), 0)
                 self.rx_pkt.connect(fcc.handle_packet)
-                self.fc_controls.append(fcc)
+                self.controls.append(fcc)
                 self.cols[col].addWidget(fcc)
 
 
