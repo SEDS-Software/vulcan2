@@ -93,6 +93,8 @@ struct message
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
+TIM_HandleTypeDef htim14;
+
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart3;
 
@@ -155,8 +157,7 @@ uint8_t tx_msg_buffer[TX_MSG_QUEUE_LEN*(sizeof(struct message))];
 StaticQueue_t tx_msg_queue;
 QueueHandle_t tx_msg_queue_handle;
 
-
-uint16_t adc_dma_buffer[16];
+uint16_t adc1_dma_buffer[9];
 
 uint16_t solenoid_state = 0x8000;
 
@@ -174,6 +175,7 @@ static void MX_DMA_Init(void);
 static void MX_UART4_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_TIM14_Init(void);
 void StartDefaultTask(void const * argument);
 void startMessageHandler(void const * argument);
 void startSgRead(void const * argument);
@@ -284,7 +286,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 //void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc);
 
 uint32_t adc_ref_acc;
-uint32_t adc_acc[8];
+uint32_t adc1_acc[8];
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
@@ -292,16 +294,34 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   {
     // exponential moving average
 
-    adc_ref_acc = adc_ref_acc * 0.9999 + (adc_dma_buffer[0] << 16) * 0.0001;
-    //adc_ref_acc += ((adc_dma_buffer[0] << 16) - adc_ref_acc) * 0.0001;
+    adc_ref_acc = adc_ref_acc * 0.999 + (adc1_dma_buffer[0] << 16) * 0.001;
 
     for (int i = 0; i < 8; i++)
     {
-      adc_acc[i] = adc_acc[i] * 0.9999 + (adc_dma_buffer[i+1] << 16) * 0.0001;
-      //adc_acc[i] += ((adc_dma_buffer[i+1] << 16) - adc_acc[i]) * 0.0001;
+      adc1_acc[i] = adc1_acc[i] * 0.999 + (adc1_dma_buffer[i+1] << 16) * 0.001;
     }
+  }
+}
 
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buffer, 9);
+//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_PeriodElapsedHalfCpltCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_IC_CaptureHalfCpltCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_PWM_PulseFinishedHalfCpltCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_TriggerCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_TriggerHalfCpltCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_ErrorCallback(TIM_HandleTypeDef *htim);
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim == &htim14)
+  {
+    // 1 ms timer tick
+
+    // sample ADC
+    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc1_dma_buffer, 9);
   }
 }
 
@@ -350,6 +370,7 @@ int main(void)
   MX_UART4_Init();
   MX_ADC1_Init();
   MX_USART3_UART_Init();
+  MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
 
   usart3_rx_queue_handle = xQueueCreateStatic(sizeof(usart3_rx_buffer), 1, usart3_rx_buffer, &usart3_rx_queue);
@@ -367,9 +388,7 @@ int main(void)
   rx_msg_queue_handle = xQueueCreateStatic(RX_MSG_QUEUE_LEN, sizeof(struct message), rx_msg_buffer, &rx_msg_queue);
   tx_msg_queue_handle = xQueueCreateStatic(TX_MSG_QUEUE_LEN, sizeof(struct message), tx_msg_buffer, &tx_msg_queue);
 
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buffer, 9);
-
-
+  HAL_TIM_Base_Start_IT(&htim14);
 
   /* USER CODE END 2 */
 
@@ -408,7 +427,7 @@ int main(void)
 
   /* Start scheduler */
   osKernelStart();
-  
+ 
   /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
@@ -494,7 +513,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 9;
   hadc1.Init.DMAContinuousRequests = ENABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     Error_Handler();
@@ -503,7 +522,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_VREFINT;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_56CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -579,6 +598,37 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief TIM14 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM14_Init(void)
+{
+
+  /* USER CODE BEGIN TIM14_Init 0 */
+
+  /* USER CODE END TIM14_Init 0 */
+
+  /* USER CODE BEGIN TIM14_Init 1 */
+
+  /* USER CODE END TIM14_Init 1 */
+  htim14.Instance = TIM14;
+  htim14.Init.Prescaler = 83;
+  htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim14.Init.Period = 1000;
+  htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim14) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM14_Init 2 */
+
+  /* USER CODE END TIM14_Init 2 */
+
+}
+
+/**
   * @brief UART4 Initialization Function
   * @param None
   * @retval None
@@ -649,6 +699,7 @@ static void MX_USART3_UART_Init(void)
   */
 static void MX_DMA_Init(void) 
 {
+
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
 
@@ -766,7 +817,6 @@ void StartDefaultTask(void const * argument)
 {
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
-
   /* USER CODE BEGIN 5 */
   struct message msg;
 
@@ -808,16 +858,13 @@ void StartDefaultTask(void const * argument)
       {
         // rescale to 10,000 counts per volt
         // assuming ref is 1.21 volts
-        //vals[i] = (((uint32_t)adc_dma_buffer[i+1])*12100)/ref;
-        //vals[i] = adc_dma_buffer[i+1];
-        vals[i] = (((uint64_t)adc_acc[i])*12100)/ref;
-        //vals[i] = adc_acc[i] >> 16;
+        vals[i] = (((uint64_t)adc1_acc[i])*12100)/ref;
       }
 
       msg.ptype   = 0x20;
       msg.len     = 0;
-      msg.data[msg.len++] = 0;
-      msg.data[msg.len++] = 0;
+      msg.data[msg.len++] = 0; // bank
+      msg.data[msg.len++] = 0; // type
       for (int i = 0; i < 8 ; i++)
       {
         msg.data[msg.len++] = vals[i] & 0xff;
@@ -825,13 +872,10 @@ void StartDefaultTask(void const * argument)
       }
       xQueueSend(tx_msg_queue_handle, &msg, 0);
 
-      //HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buffer, 8);
-      //HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buffer, 7);
-
       // Send solenoid states
       msg.ptype   = 0x10;
       msg.len     = 0;
-      msg.data[msg.len++] = 0;
+      msg.data[msg.len++] = 0; // bank
       msg.data[msg.len++] = solenoid_state & 0xff;
       msg.data[msg.len++] = solenoid_state >> 8;
       xQueueSend(tx_msg_queue_handle, &msg, 0);
@@ -851,7 +895,7 @@ void StartDefaultTask(void const * argument)
 
       msg.ptype   = 0x10;
       msg.len     = 0;
-      msg.data[msg.len++] = 1;
+      msg.data[msg.len++] = 1; // bank
       msg.data[msg.len++] = state & 0xff;
       msg.data[msg.len++] = state >> 8;
       xQueueSend(tx_msg_queue_handle, &msg, 0);
