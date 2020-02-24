@@ -136,6 +136,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actionPTDiagnostics.triggered.connect(self.do_pt_diagnostics)
         self.menuTools.addAction(self.actionPTDiagnostics)
 
+        self.actionSetSafeState = QtWidgets.QAction(self)
+        self.actionSetSafeState.setObjectName("actionSetSafeState")
+        self.actionSetSafeState.setText(QtWidgets.QApplication.translate("MainWindow", "Set Safe State", None))
+        self.actionSetSafeState.triggered.connect(self.do_set_safe_state)
+        self.menuTools.addAction(self.actionSetSafeState)
+
+        self.actionSetDefaultState = QtWidgets.QAction(self)
+        self.actionSetDefaultState.setObjectName("actionSetDefaultState")
+        self.actionSetDefaultState.setText(QtWidgets.QApplication.translate("MainWindow", "Set Default State", None))
+        self.actionSetDefaultState.triggered.connect(self.do_set_default_state)
+        self.menuTools.addAction(self.actionSetDefaultState)
+
         self.actionAbout = QtWidgets.QAction(self)
         self.actionAbout.setObjectName("actionAbout")
         self.actionAbout.setText(QtWidgets.QApplication.translate("MainWindow", "About", None))
@@ -205,6 +217,10 @@ class MainWindow(QtWidgets.QMainWindow):
                     ch.disable_label = config[s].get('disable_label', "Disable")
                     ch.enabled_label = config[s].get('enabled_label', "Enabled")
                     ch.disabled_label = config[s].get('disabled_label', "Disabled")
+                v = config[s].get('default', '')
+                ch.default_value = bool(int(v)) if v else None
+                v = config[s].get('safe', '')
+                ch.safe_value = bool(int(v)) if v else None
                 ch.timeout = float(config[s].get('timeout', 1.0))
                 ch.send_pkt = self.send_pkt
                 self.dio_channels[s] = ch
@@ -437,6 +453,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def do_pt_diagnostics(self):
         self.ptDiagnostics.show()
+
+    def do_set_safe_state(self):
+        for ch in self.dio_channels.values():
+            ch.command_safe_state()
+
+    def do_set_default_state(self):
+        for ch in self.dio_channels.values():
+            ch.command_default_state()
 
     def do_open_valve(self, valve):
         self.set_dio.emit(valve.devid, valve.bank, valve.channel, 0 if valve.invert else 1)

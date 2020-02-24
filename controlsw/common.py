@@ -47,6 +47,8 @@ class DIOChannel(object):
         self.disabled_label = "Off"
         self.raw_value = None
         self.value = None
+        self.default_value = None
+        self.safe_value = None
         self.timeout = 1.0
         self.timeout_limit = 0
         self.controls = []
@@ -77,12 +79,19 @@ class DIOChannel(object):
     def command_state(self, value):
         pkt = packet.DIOSetBitPacket()
         pkt.dest = self.devid
-        #pkt.source = self.devid
         pkt.flags = 0
         pkt.bank = self.bank
         pkt.bit = self.channel
         pkt.state = (not value) if self.invert else value
         self.send_pkt(pkt)
+
+    def command_default_state(self):
+        if self.default_value is not None:
+            self.command_state(self.default_value)
+
+    def command_safe_state(self):
+        if self.safe_value is not None:
+            self.command_state(self.safe_value)
 
     def tick(self):
         if self.timeout_limit and self.timeout_limit < time.time():
