@@ -192,6 +192,7 @@ NVIC.PriorityGroup=NVIC_PRIORITYGROUP_4
 NVIC.SDIO_IRQn=true\:5\:0\:false\:false\:true\:true\:true\:true
 NVIC.SVCall_IRQn=true\:0\:0\:false\:false\:false\:false\:false\:false
 NVIC.SysTick_IRQn=true\:15\:0\:false\:false\:true\:true\:false\:true
+NVIC.TIM8_TRG_COM_TIM14_IRQn=true\:5\:0\:false\:false\:true\:true\:true\:true
 NVIC.UART4_IRQn=true\:5\:0\:false\:false\:true\:true\:true\:true
 NVIC.USART1_IRQn=true\:5\:0\:false\:false\:true\:true\:true\:true
 NVIC.USART2_IRQn=true\:5\:0\:false\:false\:true\:true\:true\:true
