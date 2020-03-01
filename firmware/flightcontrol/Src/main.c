@@ -515,13 +515,15 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   {
     // exponential moving average
 
-    adc_ref_acc = adc_ref_acc * 0.9999 + (adc1_dma_buffer[0] << 16) * 0.0001;
+    adc_ref_acc = adc_ref_acc * 0.999 + (adc1_dma_buffer[0] << 16) * 0.001;
   }
   else if (hadc == &hadc3)
   {
+    // exponential moving average
+
     for (int i = 0; i < 4; i++)
     {
-      adc3_acc[i] = adc3_acc[i] * 0.999 + (adc3_dma_buffer[i] << 16) * 0.001;
+      adc3_acc[i] = adc3_acc[i] * 0.95 + (adc3_dma_buffer[i] << 16) * 0.05;
     }
   }
 }
