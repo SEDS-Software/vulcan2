@@ -2970,6 +2970,7 @@ void StartIOTask(void const * argument)
 
   uint32_t next_gse_update = 0;
   uint32_t next_radio_update = 0;
+  uint32_t next_fc_addr_update = 0;
   uint8_t update = 0;
 
   uint32_t ref;
@@ -3059,6 +3060,38 @@ void StartIOTask(void const * argument)
     HAL_GPIO_WritePin(S_CTL_4_GPIO_Port, S_CTL_4_Pin, solenoid_state & (1 << 3) ? GPIO_PIN_SET : GPIO_PIN_RESET);
     HAL_GPIO_WritePin(S_CTL_5_GPIO_Port, S_CTL_5_Pin, solenoid_state & (1 << 4) ? GPIO_PIN_SET : GPIO_PIN_RESET);
     HAL_GPIO_WritePin(S_CTL_6_GPIO_Port, S_CTL_6_Pin, solenoid_state & (1 << 5) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+
+    // set flight controller addresses
+    if (next_fc_addr_update <= osKernelSysTick())
+    {
+      next_fc_addr_update += 5000;
+
+      msg.dest    = MSG_DEST_BCAST;
+      msg.src     = dev_id;
+      msg.flags   = 0x00;
+
+      // flight controller 1
+      msg.tx_mask = MSG_TX_UART1;
+      msg.ptype   = MSG_TYPE_COMMAND;
+      msg.len     = 0;
+      msg.data[msg.len++] = 0xf0; // command: set address
+      msg.data[msg.len++] = 0x08;
+      msg.data[msg.len++] = 0x00;
+      msg.data[msg.len++] = 0xff;
+      msg.data[msg.len++] = 0x09; // address 0x09
+      xQueueSend(tx_msg_queue_handle, &msg, 0);
+
+      // flight controller 2
+      msg.tx_mask = MSG_TX_UART3;
+      msg.ptype   = MSG_TYPE_COMMAND;
+      msg.len     = 0;
+      msg.data[msg.len++] = 0xf0; // command: set address
+      msg.data[msg.len++] = 0x08;
+      msg.data[msg.len++] = 0x00;
+      msg.data[msg.len++] = 0xff;
+      msg.data[msg.len++] = 0x0A; // address 0x0A
+      xQueueSend(tx_msg_queue_handle, &msg, 0);
+    }
 
     osDelay(10);
   }

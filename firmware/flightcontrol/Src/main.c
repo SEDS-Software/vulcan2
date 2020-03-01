@@ -2249,6 +2249,10 @@ void startMessageHandler(void const * argument)
               // set flight monitor arm state command
               fm_armed = msg.data[4];
               break;
+            case 0xff0008f0:
+              // set address
+              dev_id = msg.data[4];
+              break;
           }
         }
       }
