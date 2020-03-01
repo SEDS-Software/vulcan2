@@ -861,7 +861,7 @@ void StartDefaultTask(void const * argument)
         vals[i] = (((uint64_t)adc1_acc[i])*12100)/ref;
       }
 
-      msg.ptype   = 0x20;
+      msg.ptype   = MSG_TYPE_ANALOG_VALUE;
       msg.len     = 0;
       msg.data[msg.len++] = 0; // bank
       msg.data[msg.len++] = 0; // type
@@ -873,7 +873,7 @@ void StartDefaultTask(void const * argument)
       xQueueSend(tx_msg_queue_handle, &msg, 0);
 
       // Send solenoid states
-      msg.ptype   = 0x10;
+      msg.ptype   = MSG_TYPE_DIO_STATE;
       msg.len     = 0;
       msg.data[msg.len++] = 0; // bank
       msg.data[msg.len++] = solenoid_state & 0xff;
@@ -893,7 +893,7 @@ void StartDefaultTask(void const * argument)
 
       // swo_printf("state: 0x%04x\n", state);
 
-      msg.ptype   = 0x10;
+      msg.ptype   = MSG_TYPE_DIO_STATE;
       msg.len     = 0;
       msg.data[msg.len++] = 1; // bank
       msg.data[msg.len++] = state & 0xff;

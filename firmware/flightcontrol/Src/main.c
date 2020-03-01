@@ -2351,7 +2351,7 @@ void StartIOTask(void const * argument)
         vals[i] = (((uint64_t)adc3_acc[i])*12100)/ref;
       }
 
-      msg.ptype   = 0x20;
+      msg.ptype   = MSG_TYPE_ANALOG_VALUE;
       msg.len     = 0;
       msg.data[msg.len++] = 0; // bank
       msg.data[msg.len++] = 0; // type
