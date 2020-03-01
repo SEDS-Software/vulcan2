@@ -294,7 +294,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   {
     // exponential moving average
 
-    adc_ref_acc = adc_ref_acc * 0.999 + (adc1_dma_buffer[0] << 16) * 0.001;
+    adc_ref_acc = adc_ref_acc * 0.9999 + (adc1_dma_buffer[0] << 16) * 0.0001;
 
     for (int i = 0; i < 8; i++)
     {
