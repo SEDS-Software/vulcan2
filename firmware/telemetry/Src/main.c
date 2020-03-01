@@ -153,6 +153,7 @@ typedef enum
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc3;
 DMA_HandleTypeDef hdma_adc1;
+DMA_HandleTypeDef hdma_adc3;
 
 I2C_HandleTypeDef hi2c2;
 I2C_HandleTypeDef hi2c3;
@@ -160,6 +161,8 @@ I2C_HandleTypeDef hi2c3;
 SD_HandleTypeDef hsd;
 DMA_HandleTypeDef hdma_sdio_rx;
 DMA_HandleTypeDef hdma_sdio_tx;
+
+TIM_HandleTypeDef htim14;
 
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart1;
@@ -313,7 +316,8 @@ uint8_t baro_cal_valid = 0;
 uint8_t log_status = 0;
 
 
-uint16_t adc_dma_buffer[8];
+uint16_t adc1_dma_buffer[5];
+uint16_t adc3_dma_buffer[4];
 
 uint16_t solenoid_state = 0;
 
@@ -342,6 +346,7 @@ static void MX_I2C3_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_ADC3_Init(void);
 static void MX_I2C2_Init(void);
+static void MX_TIM14_Init(void);
 void StartLoggingTask(void const * argument);
 void StartSensorTask(void const * argument);
 void StartMonitorTask(void const * argument);
@@ -515,7 +520,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 //void HAL_ADC_ErrorCallback(ADC_HandleTypeDef *hadc);
 
 uint32_t adc_ref_acc;
-uint32_t adc_acc[4];
+uint32_t adc1_acc[4];
+uint32_t adc3_acc[4];
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
@@ -523,14 +529,44 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   {
     // exponential moving average
 
-    adc_ref_acc = adc_ref_acc * 0.9999 + (adc_dma_buffer[0] << 16) * 0.0001;
+    adc_ref_acc = adc_ref_acc * 0.9999 + (adc1_dma_buffer[0] << 16) * 0.0001;
 
     for (int i = 0; i < 4; i++)
     {
-      adc_acc[i] = adc_acc[i] * 0.9999 + (adc_dma_buffer[i+1] << 16) * 0.0001;
+      adc1_acc[i] = adc1_acc[i] * 0.999 + (adc1_dma_buffer[i+1] << 16) * 0.001;
     }
+  }
+  else if (hadc == &hadc3)
+  {
+    // exponential moving average
 
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buffer, 5);
+    for (int i = 0; i < 4; i++)
+    {
+      adc3_acc[i] = adc3_acc[i] * 0.999 + (adc3_dma_buffer[i] << 16) * 0.001;
+    }
+  }
+}
+
+//void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_PeriodElapsedHalfCpltCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_IC_CaptureHalfCpltCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_PWM_PulseFinishedHalfCpltCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_TriggerCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_TriggerHalfCpltCallback(TIM_HandleTypeDef *htim);
+//void HAL_TIM_ErrorCallback(TIM_HandleTypeDef *htim);
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim == &htim14)
+  {
+    // 1 ms timer tick
+
+    // sample ADC
+    HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc1_dma_buffer, 5);
+    HAL_ADC_Start_DMA(&hadc3, (uint32_t *)adc3_dma_buffer, 4);
   }
 }
 
@@ -578,6 +614,7 @@ int main(void)
   MX_USART3_UART_Init();
   MX_ADC3_Init();
   MX_I2C2_Init();
+  MX_TIM14_Init();
   /* USER CODE BEGIN 2 */
 
   usart1_rx_queue_handle = xQueueCreateStatic(sizeof(usart1_rx_buffer), 1, usart1_rx_buffer, &usart1_rx_queue);
@@ -608,7 +645,7 @@ int main(void)
   rx_msg_queue_handle = xQueueCreateStatic(RX_MSG_QUEUE_LEN, sizeof(struct message), rx_msg_buffer, &rx_msg_queue);
   tx_msg_queue_handle = xQueueCreateStatic(TX_MSG_QUEUE_LEN, sizeof(struct message), tx_msg_buffer, &tx_msg_queue);
 
-  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buffer, 5);
+  HAL_TIM_Base_Start_IT(&htim14);
 
   imu_log_queue_handle = xQueueCreateStatic(IMU_LOG_BUFFER_SAMPLES, sizeof(struct imu_sample), imu_log_buffer, &imu_log_queue);
   mag_log_queue_handle = xQueueCreateStatic(MAG_LOG_BUFFER_SAMPLES, sizeof(struct mag_sample), mag_log_buffer, &mag_log_queue);
@@ -619,8 +656,6 @@ int main(void)
 
   gps_log_queue_handle = xQueueCreateStatic(sizeof(gps_log_buffer), 1, gps_log_buffer, &gps_log_queue);
   mon_log_queue_handle = xQueueCreateStatic(sizeof(mon_log_buffer), 1, mon_log_buffer, &mon_log_queue);
-
-  //HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_dma_buffer, 7);
 
   /* USER CODE END 2 */
 
@@ -753,7 +788,7 @@ static void MX_ADC1_Init(void)
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 5;
   hadc1.Init.DMAContinuousRequests = ENABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
   {
     Error_Handler();
@@ -835,7 +870,7 @@ static void MX_ADC3_Init(void)
   hadc3.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc3.Init.NbrOfConversion = 4;
   hadc3.Init.DMAContinuousRequests = ENABLE;
-  hadc3.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc3.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   if (HAL_ADC_Init(&hadc3) != HAL_OK)
   {
     Error_Handler();
@@ -972,6 +1007,37 @@ static void MX_SDIO_SD_Init(void)
   /* USER CODE BEGIN SDIO_Init 2 */
 
   /* USER CODE END SDIO_Init 2 */
+
+}
+
+/**
+  * @brief TIM14 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM14_Init(void)
+{
+
+  /* USER CODE BEGIN TIM14_Init 0 */
+
+  /* USER CODE END TIM14_Init 0 */
+
+  /* USER CODE BEGIN TIM14_Init 1 */
+
+  /* USER CODE END TIM14_Init 1 */
+  htim14.Instance = TIM14;
+  htim14.Init.Prescaler = 83;
+  htim14.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim14.Init.Period = 1000;
+  htim14.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim14.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim14) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM14_Init 2 */
+
+  /* USER CODE END TIM14_Init 2 */
 
 }
 
@@ -1152,6 +1218,9 @@ static void MX_DMA_Init(void)
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+  /* DMA2_Stream1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
   /* DMA2_Stream3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
@@ -1378,6 +1447,8 @@ void StartLoggingTask(void const * argument)
     }
 
     log_status = 1;
+
+    swo_printf("Log init complete\n");
 
     while (1)
     {
@@ -2931,22 +3002,39 @@ void StartIOTask(void const * argument)
 
     if (update)
     {
+      // Read board voltages with ADC
+      ref = adc_ref_acc;
+      for (int i = 0; i < 4; i++)
+      {
+        // rescale to 10,000 counts per volt
+        // assuming ref is 1.21 volts
+        vals[i] = (((uint64_t)adc3_acc[i])*12100)/ref;
+      }
+
+      msg.ptype   = 0x20;
+      msg.len     = 0;
+      msg.data[msg.len++] = 0; // bank
+      msg.data[msg.len++] = 0; // type
+      for (int i = 0; i < 4; i++)
+      {
+        msg.data[msg.len++] = vals[i] & 0xff;
+        msg.data[msg.len++] = (vals[i] >> 8) & 0xff;
+      }
+      xQueueSend(tx_msg_queue_handle, &msg, 0);
+
       // Read PT with ADC
       ref = adc_ref_acc;
       for (int i = 0; i < 4; i++)
       {
         // rescale to 10,000 counts per volt
         // assuming ref is 1.21 volts
-        //vals[i] = (((uint32_t)adc_dma_buffer[i+1])*12100)/ref;
-        //vals[i] = adc_dma_buffer[i+1];
-        vals[i] = (((uint64_t)adc_acc[i])*12100)/ref;
-        //vals[i] = adc_acc[i] >> 16;
+        vals[i] = (((uint64_t)adc1_acc[i])*12100)/ref;
       }
 
       msg.ptype   = 0x20;
       msg.len     = 0;
-      msg.data[msg.len++] = 0;
-      msg.data[msg.len++] = 0;
+      msg.data[msg.len++] = 1; // bank
+      msg.data[msg.len++] = 0; // type
       for (int i = 0; i < 4; i++)
       {
         msg.data[msg.len++] = vals[i] & 0xff;
@@ -2957,7 +3045,7 @@ void StartIOTask(void const * argument)
       // Send solenoid states
       msg.ptype   = 0x10;
       msg.len     = 0;
-      msg.data[msg.len++] = 0;
+      msg.data[msg.len++] = 0; // bank
       msg.data[msg.len++] = solenoid_state & 0xff;
       msg.data[msg.len++] = solenoid_state >> 8;
       xQueueSend(tx_msg_queue_handle, &msg, 0);
