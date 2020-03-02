@@ -530,6 +530,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
   {
     // exponential moving average
 
+    // ref channel init
+    if (adc_ref_acc == 0)
+      adc_ref_acc = adc1_dma_buffer[0] << 16;
+
     adc_ref_acc = adc_ref_acc * 0.999 + (adc1_dma_buffer[0] << 16) * 0.001;
   }
   else if (hadc == &hadc3)
