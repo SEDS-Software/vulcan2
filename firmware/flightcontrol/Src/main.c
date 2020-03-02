@@ -83,6 +83,15 @@ struct baro_sample
   int32_t raw_temp;
 };
 
+struct ain_record
+{
+  uint32_t time;
+  uint8_t bank;
+  uint8_t type;
+  uint8_t count;
+  uint16_t sample[8];
+};
+
 typedef enum
 {
   FM_STATE_PAD,
@@ -273,6 +282,11 @@ uint8_t gps_log_buffer[GPS_LOG_BUFFER_SIZE];
 StaticQueue_t gps_log_queue;
 QueueHandle_t gps_log_queue_handle;
 
+#define AIN_LOG_BUFFER_RECORDS 64
+uint8_t ain_log_buffer[AIN_LOG_BUFFER_RECORDS*sizeof(struct ain_record)];
+StaticQueue_t ain_log_queue;
+QueueHandle_t ain_log_queue_handle;
+
 #define MON_LOG_BUFFER_SIZE 1024
 uint8_t mon_log_buffer[MON_LOG_BUFFER_SIZE];
 StaticQueue_t mon_log_queue;
@@ -297,6 +311,7 @@ FIL imu_log;
 FIL mag_log;
 FIL gps_log;
 
+FIL ain_log;
 FIL mon_log;
 
 
@@ -636,6 +651,9 @@ int main(void)
   baro_mon_queue_handle = xQueueCreateStatic(BARO_MON_BUFFER_SAMPLES, sizeof(struct baro_sample), baro_mon_buffer, &baro_mon_queue);
 
   gps_log_queue_handle = xQueueCreateStatic(sizeof(gps_log_buffer), 1, gps_log_buffer, &gps_log_queue);
+
+  ain_log_queue_handle = xQueueCreateStatic(AIN_LOG_BUFFER_RECORDS, sizeof(struct ain_record), ain_log_buffer, &ain_log_queue);
+
   mon_log_queue_handle = xQueueCreateStatic(sizeof(mon_log_buffer), 1, mon_log_buffer, &mon_log_queue);
 
   /* USER CODE END 2 */
@@ -1259,6 +1277,7 @@ void StartLoggingTask(void const * argument)
   struct imu_sample imu_s;
   struct mag_sample mag_s;
   struct baro_sample baro_s;
+  struct ain_record ain_r;
 
   /* Infinite loop */
   while (1)
@@ -1363,6 +1382,16 @@ void StartLoggingTask(void const * argument)
     f_puts("gps nmea\n", &gps_log);
 
     f_sync(&gps_log);
+
+    if (f_open(&ain_log, "ain_log.csv", FA_OPEN_ALWAYS | FA_READ | FA_WRITE) != FR_OK)
+    {
+      swo_printf("Failed to open ain_log.csv\n");
+      HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // red LED on
+    }
+
+    f_puts("time,bank,type,values\n", &ain_log);
+
+    f_sync(&ain_log);
 
     if (f_open(&mon_log, "mon_log.csv", FA_OPEN_ALWAYS | FA_READ | FA_WRITE) != FR_OK)
     {
@@ -1471,6 +1500,28 @@ void StartLoggingTask(void const * argument)
         if (f_sync(&mag_log))
         {
           swo_printf("Fail mag log sync\n");
+          log_status = 0;
+          HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // red LED on
+        }
+      }
+
+      // store analog channel data
+      if (uxQueueMessagesWaiting(ain_log_queue_handle) > 8)
+      {
+        while (uxQueueMessagesWaiting(ain_log_queue_handle))
+        {
+          xQueueReceive(ain_log_queue_handle, &ain_r, 0);
+
+          f_printf(&ain_log, "%ld,%d,%d", ain_r.time, ain_r.bank, ain_r.type);
+          for (int i = 0; i < ain_r.count; i++)
+          {
+            f_printf(&ain_log, ",%d", ain_r.sample[i]);
+          }
+          f_printf(&ain_log, "\n");
+        }
+        if (f_sync(&ain_log))
+        {
+          swo_printf("Fail AIN log sync\n");
           log_status = 0;
           HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // red LED on
         }
@@ -2314,6 +2365,8 @@ void StartIOTask(void const * argument)
   /* USER CODE BEGIN StartIOTask */
   struct message msg;
 
+  struct ain_record ain_r;
+
   uint32_t next_gse_update = 0;
   uint32_t next_radio_update = 0;
   uint8_t update = 0;
@@ -2355,6 +2408,7 @@ void StartIOTask(void const * argument)
         // rescale to 10,000 counts per volt
         // assuming ref is 1.21 volts
         vals[i] = (((uint64_t)adc3_acc[i])*12100)/ref;
+        ain_r.sample[i] = vals[i];
       }
 
       msg.ptype   = MSG_TYPE_ANALOG_VALUE;
@@ -2367,6 +2421,12 @@ void StartIOTask(void const * argument)
         msg.data[msg.len++] = (vals[i] >> 8) & 0xff;
       }
       xQueueSend(tx_msg_queue_handle, &msg, 0);
+
+      ain_r.time = osKernelSysTick();
+      ain_r.bank = 0;
+      ain_r.type = 0;
+      ain_r.count = 4;
+      xQueueSend(ain_log_queue_handle, &ain_r, 0);
     }
 
     osDelay(10);
