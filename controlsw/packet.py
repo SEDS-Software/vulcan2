@@ -53,10 +53,11 @@ def parse(data):
 
 
 class Packet(object):
-    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x00):
+    def __init__(self, payload=b'', dest=0xff, source=0x00, seq=0x00, flags=0x00, ptype=0x00):
         self.payload = payload
         self.dest = dest
         self.source = source
+        self.seq = seq
         self.flags = flags
         self.ptype = ptype
 
@@ -64,11 +65,12 @@ class Packet(object):
             self.payload = bytearray(payload.payload)
             self.dest = payload.dest
             self.source = payload.source
+            self.seq = payload.seq
             self.flags = payload.flags
             self.ptype = payload.ptype
 
     def build(self):
-        data = struct.pack('BBBB', self.dest, self.source, self.flags, self.ptype)
+        data = struct.pack('BBBBB', self.dest, self.source, self.seq, self.flags, self.ptype)
 
         data += self.payload
 
@@ -82,9 +84,9 @@ class Packet(object):
         if len(data) < 6:
             return None
 
-        self.dest, self.source, self.flags, self.ptype = struct.unpack_from('BBBB', data)
+        self.dest, self.source, self.seq, self.flags, self.ptype = struct.unpack_from('BBBBB', data)
 
-        self.payload = data[4:-2]
+        self.payload = data[5:-2]
 
         return crc16.crc16(data) == 0
 
@@ -92,32 +94,33 @@ class Packet(object):
         if isinstance(payload, Packet):
             return (self.dest == other.dest and
                 self.source == other.source and
+                self.seq == other.seq and
                 self.flags == other.flags and
                 self.ptype == other.ptype and
                 self.payload == other.payload)
         return False
 
     def __repr__(self):
-        return '%s(payload=%s, dest=0x%x, source=0x%x, flags=0x%x, ptype=%d)' % (type(self).__name__, repr(self.payload), self.dest, self.source, self.flags, self.ptype)
+        return '%s(payload=%s, dest=0x%x, source=0x%x, seq=0x%x, flags=0x%x, ptype=%d)' % (type(self).__name__, repr(self.payload), self.dest, self.source, self.seq, self.flags, self.ptype)
 
 
 class PingRequestPacket(Packet):
-    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0xfe):
-        super(PingRequestPacket, self).__init__(payload, dest, source, flags, ptype)
+    def __init__(self, payload=b'', dest=0xff, source=0x00, seq=0x00, flags=0x00, ptype=0xfe):
+        super(PingRequestPacket, self).__init__(payload, dest, source, seq, flags, ptype)
 
 register(PingRequestPacket, 0xfe)
 
 
 class PingResponsePacket(Packet):
-    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0xff):
-        super(PingResponsePacket, self).__init__(payload, dest, source, flags, ptype)
+    def __init__(self, payload=b'', dest=0xff, source=0x00, seq=0x00, flags=0x00, ptype=0xff):
+        super(PingResponsePacket, self).__init__(payload, dest, source, seq, flags, ptype)
 
 register(PingResponsePacket, 0xff)
 
 
 class CommandPacket(Packet):
-    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x08):
-        super(CommandPacket, self).__init__(payload, dest, source, flags, ptype)
+    def __init__(self, payload=b'', dest=0xff, source=0x00, seq=0x00, flags=0x00, ptype=0x08):
+        super(CommandPacket, self).__init__(payload, dest, source, seq, flags, ptype)
 
         self.cmd = 0
         self.data = b''
@@ -138,8 +141,8 @@ register(CommandPacket, 0x08)
 
 
 class DIOStatePacket(Packet):
-    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x10):
-        super(DIOStatePacket, self).__init__(payload, dest, source, flags, ptype)
+    def __init__(self, payload=b'', dest=0xff, source=0x00, seq=0x00, flags=0x00, ptype=0x10):
+        super(DIOStatePacket, self).__init__(payload, dest, source, seq, flags, ptype)
 
         self.bank = 0
         self.state = 0
@@ -162,8 +165,8 @@ register(DIOStatePacket, 0x10)
 
 
 class DIOSetBitPacket(Packet):
-    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x11):
-        super(DIOSetBitPacket, self).__init__(payload, dest, source, flags, ptype)
+    def __init__(self, payload=b'', dest=0xff, source=0x00, seq=0x00, flags=0x00, ptype=0x11):
+        super(DIOSetBitPacket, self).__init__(payload, dest, source, seq, flags, ptype)
 
         self.bank = 0
         self.bit = 0
@@ -184,8 +187,8 @@ register(DIOSetBitPacket, 0x11)
 
 
 class AnalogValuePacket(Packet):
-    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x20):
-        super(AnalogValuePacket, self).__init__(payload, dest, source, flags, ptype)
+    def __init__(self, payload=b'', dest=0xff, source=0x00, seq=0x00, flags=0x00, ptype=0x20):
+        super(AnalogValuePacket, self).__init__(payload, dest, source, seq, flags, ptype)
 
         self.bank = 0
         self.type = 0
@@ -212,8 +215,8 @@ register(AnalogValuePacket, 0x20)
 
 
 class GpsPositionPacket(Packet):
-    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0x31):
-        super(GpsPositionPacket, self).__init__(payload, dest, source, flags, ptype)
+    def __init__(self, payload=b'', dest=0xff, source=0x00, seq=0x00, flags=0x00, ptype=0x31):
+        super(GpsPositionPacket, self).__init__(payload, dest, source, seq, flags, ptype)
 
         self.latitude = 0
         self.longitude = 0
@@ -273,8 +276,8 @@ register(GpsPositionPacket, 0x31)
 
 
 class FlightStatusPacket(Packet):
-    def __init__(self, payload=b'', dest=0xff, source=0x00, flags=0x00, ptype=0xf0):
-        super(FlightStatusPacket, self).__init__(payload, dest, source, flags, ptype)
+    def __init__(self, payload=b'', dest=0xff, source=0x00, seq=0x00, flags=0x00, ptype=0xf0):
+        super(FlightStatusPacket, self).__init__(payload, dest, source, seq, flags, ptype)
 
         self.time = 0
         self.flight_phase = 0

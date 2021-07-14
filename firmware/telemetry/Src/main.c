@@ -46,6 +46,7 @@ struct message
 {
   uint8_t dest;
   uint8_t src;
+  uint8_t seq;
   uint8_t flags;
   uint8_t ptype;
   uint16_t len;
@@ -350,6 +351,8 @@ uint16_t adc3_dma_buffer[4];
 uint16_t solenoid_state = 0;
 
 uint8_t dev_id = 0x08;
+
+uint8_t tx_seq = 0x00;
 
 
 // flight monitoring
@@ -2668,12 +2671,13 @@ void StartMessageHandlerTask(void const * argument)
 
             msg.dest    = pkt_buffer[0];
             msg.src     = pkt_buffer[1];
-            msg.flags   = pkt_buffer[2];
-            msg.ptype   = pkt_buffer[3];
+            msg.seq     = pkt_buffer[2];
+            msg.flags   = pkt_buffer[3];
+            msg.ptype   = pkt_buffer[4];
             msg.rx_int  = MSG_RX_UART1;
             msg.tx_mask = MSG_TX_NONE;
-            msg.len     = len-6;
-            memcpy(&msg.data, &pkt_buffer[4], msg.len);
+            msg.len     = len-7;
+            memcpy(&msg.data, &pkt_buffer[5], msg.len);
             xQueueSend(rx_msg_queue_handle, &msg, 0);
           }
           else
@@ -2743,12 +2747,13 @@ void StartMessageHandlerTask(void const * argument)
 
           msg.dest    = pkt_buffer[0];
           msg.src     = pkt_buffer[1];
-          msg.flags   = pkt_buffer[2];
-          msg.ptype   = pkt_buffer[3];
+          msg.seq     = pkt_buffer[2];
+          msg.flags   = pkt_buffer[3];
+          msg.ptype   = pkt_buffer[4];
           msg.rx_int  = MSG_RX_UART2;
           msg.tx_mask = MSG_TX_NONE;
-          msg.len     = len-6;
-          memcpy(&msg.data, &pkt_buffer[4], msg.len);
+          msg.len     = len-7;
+          memcpy(&msg.data, &pkt_buffer[5], msg.len);
           xQueueSend(rx_msg_queue_handle, &msg, 0);
         }
         else
@@ -2797,12 +2802,13 @@ void StartMessageHandlerTask(void const * argument)
 
             msg.dest    = pkt_buffer[0];
             msg.src     = pkt_buffer[1];
-            msg.flags   = pkt_buffer[2];
-            msg.ptype   = pkt_buffer[3];
+            msg.seq     = pkt_buffer[2];
+            msg.flags   = pkt_buffer[3];
+            msg.ptype   = pkt_buffer[4];
             msg.rx_int  = MSG_RX_UART3;
             msg.tx_mask = MSG_TX_NONE;
-            msg.len     = len-6;
-            memcpy(&msg.data, &pkt_buffer[4], msg.len);
+            msg.len     = len-7;
+            memcpy(&msg.data, &pkt_buffer[5], msg.len);
             xQueueSend(rx_msg_queue_handle, &msg, 0);
           }
           else
@@ -2853,12 +2859,13 @@ void StartMessageHandlerTask(void const * argument)
 
             msg.dest    = pkt_buffer[0];
             msg.src     = pkt_buffer[1];
-            msg.flags   = pkt_buffer[2];
-            msg.ptype   = pkt_buffer[3];
+            msg.seq     = pkt_buffer[2];
+            msg.flags   = pkt_buffer[3];
+            msg.ptype   = pkt_buffer[4];
             msg.rx_int  = MSG_RX_UART4;
             msg.tx_mask = MSG_TX_NONE;
-            msg.len     = len-6;
-            memcpy(&msg.data, &pkt_buffer[4], msg.len);
+            msg.len     = len-7;
+            memcpy(&msg.data, &pkt_buffer[5], msg.len);
             xQueueSend(rx_msg_queue_handle, &msg, 0);
           }
           else
@@ -2950,16 +2957,20 @@ void StartMessageHandlerTask(void const * argument)
 
       pkt_buffer[0] = msg.dest;
       pkt_buffer[1] = msg.src;
-      pkt_buffer[2] = msg.flags;
-      pkt_buffer[3] = msg.ptype;
-      memcpy(&pkt_buffer[4], &msg.data, msg.len);
+      pkt_buffer[2] = tx_seq;
+      pkt_buffer[3] = msg.flags;
+      pkt_buffer[4] = msg.ptype;
+      memcpy(&pkt_buffer[5], &msg.data, msg.len);
 
-      crc = crc16_block(pkt_buffer, msg.len+4);
+      tx_seq = tx_seq + 1;
 
-      pkt_buffer[msg.len+4] = crc & 0xff;
-      pkt_buffer[msg.len+5] = crc >> 8;
+      crc = crc16_block(pkt_buffer, msg.len+5);
 
-      len = cobs_encode(pkt_buffer, msg.len+6, pkt_buffer_2);
+      pkt_buffer[msg.len+5] = crc & 0xff;
+      pkt_buffer[msg.len+6] = crc >> 8;
+
+      len = cobs_encode(pkt_buffer, msg.len+7, pkt_buffer_2);
+      pkt_buffer_2[len++] = 0;
 
       // UART 1 (Flight controller 1)
       if (msg.tx_mask & MSG_TX_UART1)
@@ -2975,8 +2986,6 @@ void StartMessageHandlerTask(void const * argument)
             HAL_UART_Transmit_IT(&huart1, usart1_tx_hw_buffer, 1);
           }
         }
-        ch = 0;
-        xQueueSend(usart1_tx_queue_handle, &ch, 10);
       }
 
       // UART 3 (Flight controller 2)
@@ -2993,8 +3002,6 @@ void StartMessageHandlerTask(void const * argument)
             HAL_UART_Transmit_IT(&huart3, usart3_tx_hw_buffer, 1);
           }
         }
-        ch = 0;
-        xQueueSend(usart3_tx_queue_handle, &ch, 10);
       }
 
       // UART 4 (GSE umbilical)
@@ -3011,14 +3018,12 @@ void StartMessageHandlerTask(void const * argument)
             HAL_UART_Transmit_IT(&huart4, usart4_tx_hw_buffer, 1);
           }
         }
-        ch = 0;
-        xQueueSend(usart4_tx_queue_handle, &ch, 10);
       }
 
       // USART 2 (Xtend module)
       if (msg.tx_mask & MSG_TX_UART2 && msg.flags & MSG_FLAG_RADIO)
       {
-        len = msg.len+6+5;
+        len = msg.len+7+5;
         pkt_buffer_2[0] = 0x7e; // SOF
         pkt_buffer_2[1] = len >> 8; // len TODO
         pkt_buffer_2[2] = len;
@@ -3027,7 +3032,7 @@ void StartMessageHandlerTask(void const * argument)
         pkt_buffer_2[5] = 0xff; // dest address
         pkt_buffer_2[6] = 0xff;
         pkt_buffer_2[7] = 0x00; // options
-        memcpy(&pkt_buffer_2[8], &pkt_buffer, msg.len+6);
+        memcpy(&pkt_buffer_2[8], &pkt_buffer, msg.len+7);
 
         // checksum
         ch = 0;

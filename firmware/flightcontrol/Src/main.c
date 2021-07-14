@@ -46,6 +46,7 @@ struct message
 {
   uint8_t dest;
   uint8_t src;
+  uint8_t seq;
   uint8_t flags;
   uint8_t ptype;
   uint16_t len;
@@ -324,6 +325,8 @@ uint16_t adc1_dma_buffer[1];
 uint16_t adc3_dma_buffer[4];
 
 uint8_t dev_id = 0x09;
+
+uint8_t tx_seq = 0x00;
 
 // flight monitoring
 
@@ -2242,12 +2245,13 @@ void startMessageHandler(void const * argument)
 
             msg.dest    = pkt_buffer[0];
             msg.src     = pkt_buffer[1];
-            msg.flags   = pkt_buffer[2];
-            msg.ptype   = pkt_buffer[3];
+            msg.seq     = pkt_buffer[2];
+            msg.flags   = pkt_buffer[3];
+            msg.ptype   = pkt_buffer[4];
             msg.rx_int  = MSG_RX_UART4;
             msg.tx_mask = MSG_TX_NONE;
-            msg.len     = len-6;
-            memcpy(&msg.data, &pkt_buffer[4], msg.len);
+            msg.len     = len-7;
+            memcpy(&msg.data, &pkt_buffer[5], msg.len);
             xQueueSend(rx_msg_queue_handle, &msg, 0);
           }
           else
@@ -2320,16 +2324,20 @@ void startMessageHandler(void const * argument)
 
       pkt_buffer[0] = msg.dest;
       pkt_buffer[1] = msg.src;
-      pkt_buffer[2] = msg.flags;
-      pkt_buffer[3] = msg.ptype;
-      memcpy(&pkt_buffer[4], &msg.data, msg.len);
+      pkt_buffer[2] = tx_seq;
+      pkt_buffer[3] = msg.flags;
+      pkt_buffer[4] = msg.ptype;
+      memcpy(&pkt_buffer[5], &msg.data, msg.len);
 
-      crc = crc16_block(pkt_buffer, msg.len+4);
+      tx_seq = tx_seq + 1;
 
-      pkt_buffer[msg.len+4] = crc & 0xff;
-      pkt_buffer[msg.len+5] = crc >> 8;
+      crc = crc16_block(pkt_buffer, msg.len+5);
 
-      len = cobs_encode(pkt_buffer, msg.len+6, pkt_buffer_2);
+      pkt_buffer[msg.len+5] = crc & 0xff;
+      pkt_buffer[msg.len+6] = crc >> 8;
+
+      len = cobs_encode(pkt_buffer, msg.len+7, pkt_buffer_2);
+      pkt_buffer_2[len++] = 0;
 
       // UART 4 (Telemetry board)
       if (msg.tx_mask & MSG_TX_UART4)
@@ -2345,8 +2353,6 @@ void startMessageHandler(void const * argument)
             HAL_UART_Transmit_IT(&huart4, usart4_tx_hw_buffer, 1);
           }
         }
-        ch = 0;
-        xQueueSend(usart4_tx_queue_handle, &ch, 10);
       }
     }
 

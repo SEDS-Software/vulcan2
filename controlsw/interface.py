@@ -33,13 +33,19 @@ import xbee
 
 class Interface(object):
     def __init__(self):
+        self.tx_seq = 0
         self.raw_log_callback = None
         self.rssi = None
         self.tx_pkts = 0
         self.rx_pkts = 0
         self.rx_errs = 0
 
-    def send(self, packet):
+    def send(self, pkt):
+        pkt.seq = self.tx_seq
+        self.tx_seq = (self.tx_seq + 1) % 256
+        self._send(pkt)
+
+    def _send(self, pkt):
         raise NotImplementedError()
 
     def receive(self):
@@ -65,7 +71,7 @@ class SerialInterface(Interface):
     def timeout(self, value):
         self.serial_port.timeout = value
 
-    def send(self, pkt):
+    def _send(self, pkt):
         data = pkt.build()
         if self.raw_log_callback:
             self.raw_log_callback(1, data)
@@ -147,7 +153,7 @@ class XBeeInterface(Interface):
     def raw_log_callback(self, value):
         self.xbif.raw_log_callback = value
 
-    def send(self, pkt):
+    def _send(self, pkt):
         txrq = xbee.TxRequestPacket()
         txrq.dest_addr = 0xffff
         txrq.data = pkt.build()
@@ -215,7 +221,7 @@ class UDPInterface(Interface):
     def timeout(self, value):
         self.socket.settimeout(value)
 
-    def send(self, pkt):
+    def _send(self, pkt):
         data = pkt.build()
         if self.raw_log_callback:
             self.raw_log_callback(1, data)
