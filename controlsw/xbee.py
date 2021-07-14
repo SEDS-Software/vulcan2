@@ -77,7 +77,7 @@ class Packet(object):
         return sum(data[3:]) & 0xff == 0xff
 
     def __eq__(self, other):
-        if isinstance(payload, Packet):
+        if isinstance(other, Packet):
             return (self.cmdid == other.cmdid and
                 self.payload == other.payload)
         return False
@@ -230,10 +230,10 @@ class SerialInterface(object):
                 self.pkt_buffer.extend(self.serial_port.read(1))
                 continue
 
-            l = struct.unpack_from('>H', self.pkt_buffer, 1)[0]
-            if len(self.pkt_buffer) >= l+4:
-                data = self.pkt_buffer[0:l+4]
-                del self.pkt_buffer[0:l+4]
+            length = struct.unpack_from('>H', self.pkt_buffer, 1)[0]
+            if len(self.pkt_buffer) >= length+4:
+                data = self.pkt_buffer[0:length+4]
+                del self.pkt_buffer[0:length+4]
 
                 pkt = parse(data)
 
@@ -255,10 +255,10 @@ class SerialInterface(object):
             if len(self.pkt_buffer) < 4:
                 return None
 
-            l = struct.unpack_from('>H', self.pkt_buffer, 1)[0]
-            if len(self.pkt_buffer) >= l+4:
-                data = self.pkt_buffer[0:l+4]
-                del self.pkt_buffer[0:l+4]
+            length = struct.unpack_from('>H', self.pkt_buffer, 1)[0]
+            if len(self.pkt_buffer) >= length+4:
+                data = self.pkt_buffer[0:length+4]
+                del self.pkt_buffer[0:length+4]
 
                 pkt = parse(data)
 
@@ -268,4 +268,3 @@ class SerialInterface(object):
                     return pkt
             else:
                 return None
-

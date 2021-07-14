@@ -232,4 +232,3 @@ class UDPInterface(Interface):
         if self.raw_log_callback:
             self.raw_log_callback(0, data)
         return packet.parse(data)
-

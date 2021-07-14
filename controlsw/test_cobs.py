@@ -24,6 +24,7 @@ THE SOFTWARE.
 
 from . import cobs
 
+
 def test_encoder():
     assert cobs.encode(b'') == b'\x01'
     assert cobs.encode(b'\x00') == b'\x01\x01'
@@ -36,6 +37,7 @@ def test_encoder():
     assert cobs.encode(bytearray(range(2, 256))+b'\x00') == b'\xff'+bytearray(range(2, 256))+b'\x01\x01'
     assert cobs.encode(bytearray(range(3, 256))+b'\x00\x01') == b'\xfe'+bytearray(range(3, 256))+b'\x02\x01'
 
+
 def test_decoder():
     assert cobs.decode(b'\x01') == b''
     assert cobs.decode(b'\x01\x01') == b'\x00'
@@ -47,4 +49,3 @@ def test_decoder():
     assert cobs.decode(b'\xff'+bytearray(range(1, 255))+b'\x02\xff') == bytearray(range(1, 256))
     assert cobs.decode(b'\xff'+bytearray(range(2, 256))+b'\x01\x01') == bytearray(range(2, 256))+b'\x00'
     assert cobs.decode(b'\xfe'+bytearray(range(3, 256))+b'\x02\x01') == bytearray(range(3, 256))+b'\x00\x01'
-

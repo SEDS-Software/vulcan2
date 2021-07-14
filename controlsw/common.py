@@ -26,12 +26,12 @@ import PyQt5
 from PyQt5 import Qt, QtCore, QtGui, QtWidgets
 
 import math
-import serial
 import time
 
 from functools import partial
 
 import packet
+
 
 class DIOChannel(object):
     def __init__(self):
@@ -919,4 +919,3 @@ class ConnectDialogUdp(QtWidgets.QDialog):
 
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
-

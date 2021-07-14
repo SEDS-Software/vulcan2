@@ -23,7 +23,6 @@ THE SOFTWARE.
 
 """
 
-import PyQt5
 from PyQt5 import QtWidgets
 
 import sys
@@ -35,4 +34,3 @@ if __name__ == '__main__':
     frame = app.MainWindow(ini=["channels.ini", "groundstation.ini"])
     frame.show()
     sys.exit(application.exec_())
-

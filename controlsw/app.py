@@ -22,18 +22,14 @@ THE SOFTWARE.
 
 """
 
-import sys
 import platform
 
 import PyQt5
 from PyQt5 import Qt, QtCore, QtGui, QtWidgets
 
-import array
 import configparser
 import os.path
-import struct
 import serial
-import sys
 import time
 
 from functools import partial
@@ -42,6 +38,7 @@ import interface, packet
 from common import DIOChannel, AnalogChannel, DIOInputControl, DIOOutputControl, AnalogControl, CommandControl, FlightComputerStatusControl, LaunchSequenceControl, DIODiagnostics, PTDiagnostics, ConnectDialogSerial
 
 __version__ = '0.0.1'
+
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -304,7 +301,6 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.rx_pkt.connect(c.handle_packet)
                 self.controls.append(c)
                 self.cols[col].addWidget(c)
-
 
         for ch in self.dio_channels.values():
             ch.set_raw_value(None)
@@ -573,4 +569,3 @@ class MainWindow(QtWidgets.QMainWindow):
 <p>{} {}</p>""".format(__version__,
         platform.python_version(), PyQt5.Qt.PYQT_VERSION_STR, PyQt5.QtCore.QT_VERSION_STR,
         platform.system(), platform.release()))
-

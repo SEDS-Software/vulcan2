@@ -326,4 +326,3 @@ class FlightStatusPacket(Packet):
         self.imu_altitude = struct.unpack_from('<l', self.payload, 38)[0] / 1e2
 
 register(FlightStatusPacket, 0xf0)
-

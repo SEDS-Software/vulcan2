@@ -22,6 +22,7 @@ THE SOFTWARE.
 
 """
 
+
 def crc16(data, crc=0xFFFF, poly=0xA001):
     for d in data:
         crc = crc ^ d
@@ -31,4 +32,3 @@ def crc16(data, crc=0xFFFF, poly=0xA001):
             else:
                 crc = crc >> 1
     return crc
-

@@ -22,6 +22,7 @@ THE SOFTWARE.
 
 """
 
+
 def encode(block):
     block = bytearray(block)
     enc = bytearray()
@@ -55,6 +56,7 @@ def encode(block):
 
     return bytes(enc)
 
+
 def decode(block):
     block = bytearray(block)
     dec = bytearray()
@@ -78,6 +80,7 @@ def decode(block):
 
     return bytes(dec)
 
+
 def test_encoder():
     assert encode(b'') == b'\x01'
     assert encode(b'\x00') == b'\x01\x01'
@@ -90,6 +93,7 @@ def test_encoder():
     assert encode(bytearray(range(2, 256))+b'\x00') == b'\xff'+bytearray(range(2, 256))+b'\x01\x01'
     assert encode(bytearray(range(3, 256))+b'\x00\x01') == b'\xfe'+bytearray(range(3, 256))+b'\x02\x01'
 
+
 def test_decoder():
     assert decode(b'\x01') == b''
     assert decode(b'\x01\x01') == b'\x00'
@@ -101,4 +105,3 @@ def test_decoder():
     assert decode(b'\xff'+bytearray(range(1, 255))+b'\x02\xff') == bytearray(range(1, 256))
     assert decode(b'\xff'+bytearray(range(2, 256))+b'\x01\x01') == bytearray(range(2, 256))+b'\x00'
     assert decode(b'\xfe'+bytearray(range(3, 256))+b'\x02\x01') == bytearray(range(3, 256))+b'\x00\x01'
-
