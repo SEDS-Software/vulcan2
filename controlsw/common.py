@@ -486,11 +486,8 @@ class CommandControl(QtWidgets.QGroupBox):
 
         self.vbox1 = QtWidgets.QVBoxLayout(self)
 
-        self.hbox1 = QtWidgets.QHBoxLayout()
-        self.vbox1.addLayout(self.hbox1)
-
         self.sendButton = QtWidgets.QPushButton(QtWidgets.QApplication.translate("MainWindow", "Send", None), self)
-        self.hbox1.addWidget(self.sendButton)
+        self.vbox1.addWidget(self.sendButton)
 
         self.detailsLabel = QtWidgets.QLabel("Dev 0x00  Cmd 0x00000000")
         self.vbox1.setContentsMargins(16, 16, 16, 8)
