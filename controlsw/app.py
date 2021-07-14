@@ -376,7 +376,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.statusResource.setText("{} / TX pkts {} / RX pkts {} / RX errs {}".format(self.interface.port, self.interface.tx_pkts, self.interface.rx_pkts, self.interface.rx_errs))
 
                 self.interface.raw_log_callback = self.serial_log
-            except:
+            except Exception:
                 self.interface = None
                 raise
 
@@ -431,7 +431,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.statusResource.setText("{} / TX pkts {} / RX pkts {} / RX errs {} / RSSI {} dBm".format(self.interface.port, self.interface.tx_pkts, self.interface.rx_pkts, self.interface.rx_errs, self.interface.rssi))
 
                 self.interface.raw_log_callback = self.serial_log
-            except:
+            except Exception:
                 self.interface = None
                 raise
 

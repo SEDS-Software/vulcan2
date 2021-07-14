@@ -260,7 +260,7 @@ class GpsPositionPacket(Packet):
         year = d % 100 + 2000
         try:
             self.date = datetime.date(year, month, day)
-        except:
+        except Exception:
             self.date = None
         d = struct.unpack_from('<l', self.payload, 26)[0]
         hour = int(d / 1000000) % 100
@@ -268,7 +268,7 @@ class GpsPositionPacket(Packet):
         second = d % 10000
         try:
             self.time = datetime.time(hour, minute, int(second/100), (second%100) * 10000)
-        except:
+        except Exception:
             self.time = None
         self.hdop = struct.unpack_from('<h', self.payload, 30)[0] / 1e2
 

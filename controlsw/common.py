@@ -296,7 +296,7 @@ class AnalogControl(QtWidgets.QGroupBox):
         try:
             self.statusLabel.setText(self.channel.format.format(val, self.channel.unit))
             self.statusLabel.setStyleSheet('')
-        except:
+        except Exception:
             self.statusLabel.setText(self.channel.unknown_format.format(self.channel.unit))
             self.statusLabel.setStyleSheet('background-color: silver')
 
