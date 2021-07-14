@@ -162,7 +162,6 @@ class DIOInputControl(QtWidgets.QGroupBox):
         self.vbox1.addWidget(self.statusLabel, 0)
 
         self.detailsLabel = QtWidgets.QLabel("0x00:0.0  Raw -")
-        self.vbox1.setContentsMargins(16, 16, 16, 8)
         self.vbox1.addWidget(self.detailsLabel)
 
         self.set_value(None)
@@ -226,7 +225,6 @@ class DIOOutputControl(QtWidgets.QGroupBox):
         self.hbox1.addWidget(self.statusLabel, 0)
 
         self.detailsLabel = QtWidgets.QLabel("0x00:0.0  Raw -")
-        self.vbox1.setContentsMargins(16, 16, 16, 8)
         self.vbox1.addWidget(self.detailsLabel)
 
         self.set_value(None)
@@ -285,7 +283,6 @@ class AnalogControl(QtWidgets.QGroupBox):
         self.vbox1.addWidget(self.statusLabel, 0)
 
         self.detailsLabel = QtWidgets.QLabel("0x00:0.0  Raw: -.---- V")
-        self.vbox1.setContentsMargins(16, 16, 16, 8)
         self.vbox1.addWidget(self.detailsLabel)
 
         self.set_value(None)
@@ -401,7 +398,6 @@ class ValveControl(QtWidgets.QGroupBox):
         self.hbox1.addWidget(self.statusLabel, 0)
 
         self.detailsLabel = QtWidgets.QLabel("Dev 0x00  Ch 0  Raw -")
-        self.vbox1.setContentsMargins(16, 16, 16, 8)
         self.vbox1.addWidget(self.detailsLabel)
 
         self.set_status(None)
@@ -456,7 +452,6 @@ class PTControl(QtWidgets.QGroupBox):
         self.vbox1.addWidget(self.statusLabel, 0)
 
         self.detailsLabel = QtWidgets.QLabel("Dev 0x00  Ch 0  Raw -.---- v")
-        self.vbox1.setContentsMargins(16, 16, 16, 8)
         self.vbox1.addWidget(self.detailsLabel)
 
         self.set_value(None)
@@ -490,7 +485,6 @@ class CommandControl(QtWidgets.QGroupBox):
         self.vbox1.addWidget(self.sendButton)
 
         self.detailsLabel = QtWidgets.QLabel("Dev 0x00  Cmd 0x00000000")
-        self.vbox1.setContentsMargins(16, 16, 16, 8)
         self.vbox1.addWidget(self.detailsLabel)
 
     def set_name(self, name):
