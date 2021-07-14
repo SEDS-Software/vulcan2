@@ -497,7 +497,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def tick(self):
         if self.interface:
             while True:
-                pkt = self.interface.poll()
+                try:
+                    pkt = self.interface.poll()
+                except Exception:
+                    print("Poll failed; disconnecting")
+                    self.do_disconnect()
+                    break
 
                 if pkt is None:
                     break
@@ -541,6 +546,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     if self.gps_log_file:
                         self.gps_log_file.write("{},{},{},{},{},{},{},{},{},{},{},{}\n".format(time.time(), pkt.source, pkt.latitude, pkt.longitude, pkt.altitude, pkt.speed, pkt.heading, pkt.satellites, pkt.fix_type, pkt.date, pkt.time, pkt.hdop))
 
+        if self.interface:
             if isinstance(self.interface, interface.XBeeInterface):
                 self.statusResource.setText("{} / TX pkts {} / RX pkts {} / RX errs {} / RSSI {} dBm".format(self.interface.port, self.interface.tx_pkts, self.interface.rx_pkts, self.interface.rx_errs, self.interface.rssi))
             else:
