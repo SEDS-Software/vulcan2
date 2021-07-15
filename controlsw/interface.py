@@ -98,8 +98,9 @@ class SerialInterface(Interface):
                 data = cobs.decode(self.pkt_buffer[0:index])
                 del self.pkt_buffer[0:index+1]
 
-                if data is None or len(data) < 6:
+                if data is None:
                     self.rx_errs += 1
+                    print("Failed COBS decode")
                     continue
 
                 pkt = packet.parse(data)
@@ -110,6 +111,7 @@ class SerialInterface(Interface):
                     self.rx_pkts += 1
                     return pkt
                 else:
+                    print("Failed parse")
                     self.rx_errs += 1
 
             else:
@@ -165,7 +167,11 @@ class XBeeInterface(Interface):
     def receive(self):
         xbpkt = self.xbif.receive()
 
-        if xbpkt is None or not isinstance(xbpkt, xbee.RxPacket):
+        if xbpkt is None:
+            return None
+
+        if not isinstance(xbpkt, xbee.RxPacket):
+            print("Unexpected packet type")
             return None
 
         self.rssi = -xbpkt.rssi
@@ -176,6 +182,7 @@ class XBeeInterface(Interface):
             self.rx_pkts += 1
             return pkt
         else:
+            print("Failed parse")
             self.rx_errs += 1
 
         return None
@@ -188,6 +195,7 @@ class XBeeInterface(Interface):
                 return None
 
             if not isinstance(xbpkt, xbee.RxPacket):
+                print("Unexpected packet type")
                 continue
 
             self.rssi = -xbpkt.rssi
@@ -198,6 +206,7 @@ class XBeeInterface(Interface):
                 self.rx_pkts += 1
                 return pkt
             else:
+                print("Failed parse")
                 self.rx_errs += 1
 
 
