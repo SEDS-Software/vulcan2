@@ -32,7 +32,7 @@
 #include <math.h>
 
 #include "cobs.h"
-#include "crc16.h"
+#include "message.h"
 #include "ms56xx.h"
 #include "lsm9ds1.h"
 
@@ -40,20 +40,6 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
-#define MAX_PACKET_SIZE 64
-struct message
-{
-  uint8_t dest;
-  uint8_t src;
-  uint8_t seq;
-  uint8_t flags;
-  uint8_t ptype;
-  uint16_t len;
-  uint8_t rx_int;
-  uint8_t tx_mask;
-  char data[MAX_PACKET_SIZE];
-};
 
 struct imu_sample
 {
@@ -130,20 +116,6 @@ typedef enum
 #define BARO_I2C_ADDR 0xee
 
 
-#define MSG_DEST_BCAST 0xff
-
-#define MSG_FLAG_RADIO 0x10
-
-#define MSG_TYPE_COMMAND 0x08
-#define MSG_TYPE_DIO_STATE 0x10
-#define MSG_TYPE_DIO_SET_BIT 0x11
-#define MSG_TYPE_ANALOG_VALUE 0x20
-#define MSG_TYPE_PING_REQ 0xfe
-#define MSG_TYPE_PING_RESP 0xff
-
-#define MSG_TX_MASK(x) (1 << (x))
-#define MSG_INV_TX_MASK(x) ((~(1 << (x))) & 0xff)
-
 #define MSG_RX_UART1 0x00
 #define MSG_TX_UART1 MSG_TX_MASK(MSG_RX_UART1)
 
@@ -155,9 +127,6 @@ typedef enum
 
 #define MSG_RX_UART4 0x03
 #define MSG_TX_UART4 MSG_TX_MASK(MSG_RX_UART4)
-
-#define MSG_TX_ALL 0xff
-#define MSG_TX_NONE 0x00
 
 /* USER CODE END PD */
 
@@ -2631,7 +2600,6 @@ void StartMessageHandlerTask(void const * argument)
   uint8_t pkt_buffer_2[128];
   uint8_t ch;
   size_t len;
-  uint16_t crc;
 
   while(1)
   {
@@ -2656,35 +2624,15 @@ void StartMessageHandlerTask(void const * argument)
         // }
         // swo_printf("\n");
 
-        if (len > 6)
+        if (parse_message(&msg, pkt_buffer, len) == 0)
         {
-
-          if (crc16_block(pkt_buffer, len) == 0)
-          {
-            // swo_printf("Got packet [UART1]\n");
-
-            // for (int i = 0; i < len; i++)
-            // {
-            //   swo_printf("%02x ", pkt_buffer[i]);
-            // }
-            // swo_printf("\n");
-
-            msg.dest    = pkt_buffer[0];
-            msg.src     = pkt_buffer[1];
-            msg.seq     = pkt_buffer[2];
-            msg.flags   = pkt_buffer[3];
-            msg.ptype   = pkt_buffer[4];
-            msg.rx_int  = MSG_RX_UART1;
-            msg.tx_mask = MSG_TX_NONE;
-            msg.len     = len-7;
-            memcpy(&msg.data, &pkt_buffer[5], msg.len);
-            xQueueSend(rx_msg_queue_handle, &msg, 0);
-          }
-          else
-          {
-            // bad CRC
-            swo_printf("Bad CRC\n");
-          }
+          msg.rx_int  = MSG_RX_UART1;
+          msg.tx_mask = MSG_TX_NONE;
+          xQueueSend(rx_msg_queue_handle, &msg, 0);
+        }
+        else
+        {
+          swo_printf("Parse failed [UART1]\n");
         }
         usart1_pkt_buffer_ptr = 0;
       }
@@ -2732,40 +2680,21 @@ void StartMessageHandlerTask(void const * argument)
 
       if (ch == 0xff)
       {
-        len = len - 5;
-        memcpy(&pkt_buffer, &usart2_pkt_buffer[8], len);
-
-        if (crc16_block(pkt_buffer, len) == 0)
+        if (parse_message(&msg, &usart2_pkt_buffer[8], len-5) == 0)
         {
-          // swo_printf("Got packet [UART2]\n");
-
-          // for (int i = 0; i < len; i++)
-          // {
-          //   swo_printf("%02x ", pkt_buffer[i]);
-          // }
-          // swo_printf("\n");
-
-          msg.dest    = pkt_buffer[0];
-          msg.src     = pkt_buffer[1];
-          msg.seq     = pkt_buffer[2];
-          msg.flags   = pkt_buffer[3];
-          msg.ptype   = pkt_buffer[4];
           msg.rx_int  = MSG_RX_UART2;
           msg.tx_mask = MSG_TX_NONE;
-          msg.len     = len-7;
-          memcpy(&msg.data, &pkt_buffer[5], msg.len);
           xQueueSend(rx_msg_queue_handle, &msg, 0);
         }
         else
         {
-          // bad CRC
-          swo_printf("Bad CRC\n");
+          swo_printf("Parse failed [UART2]\n");
         }
       }
       else
       {
         // bad checksum
-        swo_printf("Bad checksum\n");
+        swo_printf("Bad checksum [UART2]\n");
       }
       usart2_pkt_buffer_ptr = 0;
     }
@@ -2787,35 +2716,15 @@ void StartMessageHandlerTask(void const * argument)
         // }
         // swo_printf("\n");
 
-        if (len > 6)
+        if (parse_message(&msg, pkt_buffer, len) == 0)
         {
-
-          if (crc16_block(pkt_buffer, len) == 0)
-          {
-            // swo_printf("Got packet [UART3]\n");
-
-            // for (int i = 0; i < len; i++)
-            // {
-            //   swo_printf("%02x ", pkt_buffer[i]);
-            // }
-            // swo_printf("\n");
-
-            msg.dest    = pkt_buffer[0];
-            msg.src     = pkt_buffer[1];
-            msg.seq     = pkt_buffer[2];
-            msg.flags   = pkt_buffer[3];
-            msg.ptype   = pkt_buffer[4];
-            msg.rx_int  = MSG_RX_UART3;
-            msg.tx_mask = MSG_TX_NONE;
-            msg.len     = len-7;
-            memcpy(&msg.data, &pkt_buffer[5], msg.len);
-            xQueueSend(rx_msg_queue_handle, &msg, 0);
-          }
-          else
-          {
-            // bad CRC
-            swo_printf("Bad CRC\n");
-          }
+          msg.rx_int  = MSG_RX_UART3;
+          msg.tx_mask = MSG_TX_NONE;
+          xQueueSend(rx_msg_queue_handle, &msg, 0);
+        }
+        else
+        {
+          swo_printf("Parse failed [UART3]\n");
         }
         usart3_pkt_buffer_ptr = 0;
       }
@@ -2844,35 +2753,15 @@ void StartMessageHandlerTask(void const * argument)
         // }
         // swo_printf("\n");
 
-        if (len > 6)
+        if (parse_message(&msg, pkt_buffer, len) == 0)
         {
-
-          if (crc16_block(pkt_buffer, len) == 0)
-          {
-            // swo_printf("Got packet [UART4]\n");
-
-            // for (int i = 0; i < len; i++)
-            // {
-            //   swo_printf("%02x ", pkt_buffer[i]);
-            // }
-            // swo_printf("\n");
-
-            msg.dest    = pkt_buffer[0];
-            msg.src     = pkt_buffer[1];
-            msg.seq     = pkt_buffer[2];
-            msg.flags   = pkt_buffer[3];
-            msg.ptype   = pkt_buffer[4];
-            msg.rx_int  = MSG_RX_UART4;
-            msg.tx_mask = MSG_TX_NONE;
-            msg.len     = len-7;
-            memcpy(&msg.data, &pkt_buffer[5], msg.len);
-            xQueueSend(rx_msg_queue_handle, &msg, 0);
-          }
-          else
-          {
-            // bad CRC
-            swo_printf("Bad CRC\n");
-          }
+          msg.rx_int  = MSG_RX_UART4;
+          msg.tx_mask = MSG_TX_NONE;
+          xQueueSend(rx_msg_queue_handle, &msg, 0);
+        }
+        else
+        {
+          swo_printf("Parse failed [UART4]\n");
         }
         usart4_pkt_buffer_ptr = 0;
       }
@@ -2955,21 +2844,12 @@ void StartMessageHandlerTask(void const * argument)
     {
       xQueueReceive(tx_msg_queue_handle, &msg, 0);
 
-      pkt_buffer[0] = msg.dest;
-      pkt_buffer[1] = msg.src;
-      pkt_buffer[2] = tx_seq;
-      pkt_buffer[3] = msg.flags;
-      pkt_buffer[4] = msg.ptype;
-      memcpy(&pkt_buffer[5], &msg.data, msg.len);
-
+      msg.seq = tx_seq;
       tx_seq = tx_seq + 1;
 
-      crc = crc16_block(pkt_buffer, msg.len+5);
+      pack_message(&msg, pkt_buffer, sizeof(pkt_buffer));
 
-      pkt_buffer[msg.len+5] = crc & 0xff;
-      pkt_buffer[msg.len+6] = crc >> 8;
-
-      len = cobs_encode(pkt_buffer, msg.len+7, pkt_buffer_2);
+      len = cobs_encode(pkt_buffer, msg.len+MSG_OVERHEAD, pkt_buffer_2);
       pkt_buffer_2[len++] = 0;
 
       // UART 1 (Flight controller 1)
@@ -3023,7 +2903,7 @@ void StartMessageHandlerTask(void const * argument)
       // USART 2 (Xtend module)
       if (msg.tx_mask & MSG_TX_UART2 && msg.flags & MSG_FLAG_RADIO)
       {
-        len = msg.len+7+5;
+        len = msg.len+MSG_OVERHEAD+5;
         pkt_buffer_2[0] = 0x7e; // SOF
         pkt_buffer_2[1] = len >> 8; // len TODO
         pkt_buffer_2[2] = len;
@@ -3032,7 +2912,7 @@ void StartMessageHandlerTask(void const * argument)
         pkt_buffer_2[5] = 0xff; // dest address
         pkt_buffer_2[6] = 0xff;
         pkt_buffer_2[7] = 0x00; // options
-        memcpy(&pkt_buffer_2[8], &pkt_buffer, msg.len+7);
+        memcpy(&pkt_buffer_2[8], &pkt_buffer, msg.len+MSG_OVERHEAD);
 
         // checksum
         ch = 0;
