@@ -527,6 +527,7 @@ void StartDefaultTask(void const * argument)
     msg.dest    = MSG_DEST_BCAST;
     msg.src     = dev_id;
     msg.flags   = 0x00;
+    msg.rx_int  = MSG_RX_NONE;
     //msg.tx_mask = 0;
     msg.tx_mask = MSG_TX_UART1 | MSG_TX_USB;
 
@@ -735,8 +736,11 @@ void StartMessageHandler(void const * argument)
     {
       xQueueReceive(tx_msg_queue_handle, &msg, 0);
 
-      msg.seq = tx_seq;
-      tx_seq = tx_seq + 1;
+      if (msg.rx_int == MSG_RX_NONE)
+      {
+        msg.seq = tx_seq;
+        tx_seq = tx_seq + 1;
+      }
 
       pack_message(&msg, pkt_buffer, sizeof(pkt_buffer));
 

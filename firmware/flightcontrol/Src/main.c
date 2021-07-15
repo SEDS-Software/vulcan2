@@ -2092,6 +2092,7 @@ void StartMonitorTask(void const * argument)
       msg.dest    = MSG_DEST_BCAST;
       msg.src     = dev_id;
       msg.flags   = MSG_FLAG_RADIO;
+      msg.rx_int  = MSG_RX_NONE;
       msg.tx_mask = MSG_TX_UART4 | MSG_TX_UART2;
 
       msg.ptype   = 0xf0;
@@ -2270,8 +2271,11 @@ void startMessageHandler(void const * argument)
     {
       xQueueReceive(tx_msg_queue_handle, &msg, 0);
 
-      msg.seq = tx_seq;
-      tx_seq = tx_seq + 1;
+      if (msg.rx_int == MSG_RX_NONE)
+      {
+        msg.seq = tx_seq;
+        tx_seq = tx_seq + 1;
+      }
 
       pack_message(&msg, pkt_buffer, sizeof(pkt_buffer));
 
@@ -2331,6 +2335,7 @@ void StartIOTask(void const * argument)
     msg.dest    = MSG_DEST_BCAST;
     msg.src     = dev_id;
     msg.flags   = 0x00;
+    msg.rx_int  = MSG_RX_NONE;
     msg.tx_mask = 0;
 
     if (next_gse_update <= osKernelSysTick())

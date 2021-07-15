@@ -45,6 +45,8 @@
 #define MSG_TX_MASK(x) (1 << (x))
 #define MSG_INV_TX_MASK(x) ((~(1 << (x))) & 0xff)
 
+#define MSG_RX_NONE 0xff
+
 #define MSG_TX_ALL 0xff
 #define MSG_TX_NONE 0x00
 
