@@ -91,7 +91,7 @@ class Packet(object):
         return crc16.crc16(data) == 0
 
     def __eq__(self, other):
-        if isinstance(payload, Packet):
+        if isinstance(other, Packet):
             return (self.dest == other.dest and
                 self.source == other.source and
                 self.seq == other.seq and
