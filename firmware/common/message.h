@@ -66,4 +66,7 @@ struct message
 int parse_message(struct message *msg, uint8_t *buffer, int len);
 int pack_message(struct message *msg, uint8_t *buffer, int len);
 
+int register_message(struct message *msg);
+int is_duplicate_message(struct message *msg);
+
 #endif /* MESSAGE_H_ */

@@ -706,6 +706,11 @@ void StartMessageHandler(void const * argument)
     {
       xQueueReceive(rx_msg_queue_handle, &msg, 0);
 
+      if (is_duplicate_message(&msg))
+        continue;
+
+      register_message(&msg);
+
       if (msg.dest == MSG_DEST_BCAST || msg.dest != dev_id)
       {
         // forward packet
@@ -741,6 +746,8 @@ void StartMessageHandler(void const * argument)
         msg.seq = tx_seq;
         tx_seq = tx_seq + 1;
       }
+
+      register_message(&msg);
 
       pack_message(&msg, pkt_buffer, sizeof(pkt_buffer));
 

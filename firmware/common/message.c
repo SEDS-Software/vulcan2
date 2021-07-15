@@ -69,3 +69,38 @@ int pack_message(struct message *msg, uint8_t *buffer, int len)
 
   return 0;
 }
+
+#define MESSAGE_LIST_SIZE 16
+
+static uint32_t message_list[MESSAGE_LIST_SIZE];
+static size_t message_list_ptr;
+
+static uint32_t message_sig(struct message *msg)
+{
+  uint32_t sig = 0;
+  sig |= (msg->src) << 24;
+  sig |= (msg->dest) << 16;
+  sig |= (msg->seq) << 8;
+  sig |= (msg->ptype);
+  return sig;
+}
+
+int register_message(struct message *msg)
+{
+  message_list[message_list_ptr] = message_sig(msg);
+  message_list_ptr = (message_list_ptr + 1) % MESSAGE_LIST_SIZE;
+  return 0;
+}
+
+int is_duplicate_message(struct message *msg)
+{
+  uint32_t sig = message_sig(msg);
+
+  for (size_t i = 0; i < MESSAGE_LIST_SIZE; i++)
+  {
+    if (message_list[i] == sig)
+      return 1;
+  }
+
+  return 0;
+}
