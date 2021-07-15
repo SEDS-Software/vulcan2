@@ -81,7 +81,7 @@ class Packet(object):
     def parse(self, data):
         data = bytearray(data)
 
-        if len(data) < 6:
+        if len(data) < 7:
             return None
 
         self.dest, self.source, self.seq, self.flags, self.ptype = struct.unpack_from('BBBBB', data)
