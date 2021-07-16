@@ -280,7 +280,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 c.devid = int(config[s].get('devid', '0'), 0)
                 c.cmd = int(config[s].get('cmd', '0'), 0)
                 c.data = bytes.fromhex(config[s].get('data', ''))
-                c.sendButton.clicked.connect(partial(self.do_send_cmd, int(config[s].get('devid', '0'), 0), int(config[s].get('cmd', '0'), 0), bytes.fromhex(config[s].get('data', ''))))
+                c.sendButton.clicked.connect(partial(self.do_send_cmd, c.devid, c.cmd, c.data))
                 self.controls.append(c)
                 self.cols[col].addWidget(c)
 
