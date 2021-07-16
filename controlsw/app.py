@@ -241,7 +241,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.analog_channels[s] = ch
 
         # build UI
-        for s in config.sections():
+        controls = [x for x in config.sections() if int(config[x].get('col', -1)) >= 0]
+        controls.sort(key=lambda x: int(config[x].get('order', 0)))
+
+        for s in controls:
             col = int(config[s].get('col', -1))
 
             if col < 0:
