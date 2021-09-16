@@ -28,8 +28,9 @@ import PyQt5
 from PyQt5 import Qt, QtCore, QtGui, QtWidgets
 
 import configparser
-import os.path
+import os
 import serial
+import sys
 import time
 
 from functools import partial
@@ -180,7 +181,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.vbox1.addLayout(self.hbox1)
 
         config = configparser.ConfigParser()
-        config.read(self.ini)
+        script_dir = os.path.dirname(sys.argv[0])
+        for fn in self.ini:
+            with open(os.path.join(script_dir, fn)) as f:
+                config.read_file(f)
 
         if config['app'].get('title'):
             self.setWindowTitle(config['app'].get('title'))
