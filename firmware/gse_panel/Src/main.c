@@ -514,9 +514,6 @@ void StartDefaultTask(void const * argument)
   uint32_t next_update = 0;
   uint8_t update = 0;
 
-  uint32_t ref;
-  uint32_t vals[8];
-
   while (1)
   {
     update = 0;
