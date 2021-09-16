@@ -2853,11 +2853,12 @@ void StartMessageHandlerTask(void const * argument)
 
       if (msg.rx_int == MSG_RX_NONE)
       {
+        // locally generated traffic
         msg.seq = tx_seq;
         tx_seq = tx_seq + 1;
-      }
 
-      register_message(&msg);
+        register_message(&msg);
+      }
 
       pack_message(&msg, pkt_buffer, sizeof(pkt_buffer));
 
