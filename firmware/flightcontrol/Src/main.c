@@ -1255,11 +1255,9 @@ void StartLoggingTask(void const * argument)
   /* Infinite loop */
   while (1)
   {
-    osDelay(200);
+    osDelay(500);
 
     //HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET); // blue LED on
-
-    swo_printf("Init complete\n");
 
     swo_printf("Attempting to mount micro SD card...\n");
 
@@ -1268,6 +1266,13 @@ void StartLoggingTask(void const * argument)
     {
       swo_printf("Mount failed; error code: %d\n", retSD);
       HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // red LED on
+
+      if (retSD == FR_DISK_ERR)
+      {
+        // reinit card on disk error
+        BSP_SD_Init();
+      }
+
       continue;
     }
 
@@ -1388,7 +1393,7 @@ void StartLoggingTask(void const * argument)
 
     swo_printf("Log init complete\n");
 
-    while (1)
+    while (log_status)
     {
       // store GPS data
       if (uxQueueMessagesWaiting(gps_log_queue_handle) > 128)
@@ -1522,8 +1527,10 @@ void StartLoggingTask(void const * argument)
         }
       }
 
-      osDelay(1);
+      osDelay(10);
     }
+
+    HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET); // red LED on
   }
   /* USER CODE END 5 */
 }
