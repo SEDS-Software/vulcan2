@@ -1058,7 +1058,7 @@ void startMessageHandler(void const * argument)
         xQueueSend(tx_msg_queue_handle, &msg, 0);
       }
 
-      if (msg.dest == MSG_DEST_BCAST || msg.dest == dev_id)
+      if ((msg.dest == MSG_DEST_BCAST || msg.dest == dev_id) && (msg.rx_int != MSG_RX_UART4))
       {
         // address check passed
 
