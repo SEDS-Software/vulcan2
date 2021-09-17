@@ -288,6 +288,7 @@ struct ms56xx baro;
 uint8_t baro_cal_valid = 0;
 
 uint8_t log_status = 0;
+uint16_t log_index = 0;
 
 uint16_t adc1_dma_buffer[1];
 uint16_t adc3_dma_buffer[4];
@@ -1245,7 +1246,6 @@ void StartLoggingTask(void const * argument)
 
   char buffer[128];
   uint8_t ch;
-  int k;
 
   struct imu_sample imu_s;
   struct mag_sample mag_s;
@@ -1278,10 +1278,10 @@ void StartLoggingTask(void const * argument)
 
     HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET); // red LED off
 
-    k = 0;
+    log_index = 0;
     while (1)
     {
-      sprintf(buffer, "%04d", k);
+      sprintf(buffer, "%04d", log_index);
       if (f_stat(buffer, 0) == FR_NO_FILE)
       {
         if (f_mkdir(buffer) == FR_OK)
@@ -1289,7 +1289,7 @@ void StartLoggingTask(void const * argument)
           break;
         }
       }
-      k++;
+      log_index++;
     }
 
     swo_printf("Using path %s\n", buffer);
