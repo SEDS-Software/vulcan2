@@ -2232,6 +2232,9 @@ void StartMonitorTask(void const * argument)
   float baro_alt = 0;
   float baro_vel = 0;
 
+  float apogee_alt = 0;
+  int32_t apogee_p = 0;
+
   int ts_ms = 10;
   long launch_t = 0;
 
@@ -2301,7 +2304,7 @@ void StartMonitorTask(void const * argument)
           raw_imu_accel = -imu_s.az;
           break;
       }
-      
+
       imu_accel = ((raw_imu_accel/g_scale) - 1) * 9.81;
 
       switch (fm_state)
@@ -2320,7 +2323,7 @@ void StartMonitorTask(void const * argument)
 
       last_imu_s_time = imu_s.time;
     }
-    
+
     // process new barometer data
     while (uxQueueMessagesWaiting(baro_mon_queue_handle))
     {
@@ -2343,6 +2346,13 @@ void StartMonitorTask(void const * argument)
           }
           break;
         default:
+          // capture max altitude
+
+          if (baro_alt > apogee_alt)
+          {
+            apogee_p = baro_s.p;
+            apogee_alt = baro_alt;
+          }
 
           break;
       }
