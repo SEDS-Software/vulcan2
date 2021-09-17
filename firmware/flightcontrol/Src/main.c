@@ -1800,6 +1800,7 @@ void StartMonitorTask(void const * argument)
   float imu_alt = 0;
 
   float baro_raw_alt = 0;
+  float last_baro_raw_alt = 0;
   float baro_pad_alt = 0;
   float baro_alt = 0;
   float baro_vel = 0;
@@ -1901,7 +1902,7 @@ void StartMonitorTask(void const * argument)
       // p = 101325 (1 - 2.25577e-5 * h) ** 5.25588
       // h = (1 - 10 ** (log10(p / 101325) / 5.25588)) / 2.25577e-5
       baro_raw_alt = (1.0 - pow(10, log10(baro_s.p / 101325.0) / 5.25588)) / 2.25577e-5;
-      baro_vel = baro_vel * 0.95 + ((baro_raw_alt - baro_pad_alt - baro_alt) / ((baro_s.time - last_baro_s_time)*0.001)) * 0.05;
+      baro_vel = baro_vel * 0.95 + ((baro_raw_alt - last_baro_raw_alt) / ((baro_s.time - last_baro_s_time)*0.001)) * 0.05;
       baro_alt = baro_raw_alt - baro_pad_alt;
 
       switch (fm_state)
@@ -1919,6 +1920,7 @@ void StartMonitorTask(void const * argument)
           break;
       }
 
+      last_baro_raw_alt = baro_raw_alt;
       last_baro_s_time = baro_s.time;
     }
 
