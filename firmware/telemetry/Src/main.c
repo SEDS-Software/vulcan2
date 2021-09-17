@@ -2447,6 +2447,18 @@ void StartMonitorTask(void const * argument)
         if (baro_vel < 1) // TODO parameter
         {
           // apogee actions here
+          sprintf(buffer, "%ld apogee\n", osKernelSysTick());
+          swo_printf("%s", buffer);
+          for (char *ptr = buffer; *ptr; ptr++)
+            xQueueSend(mon_log_queue_handle, ptr, 0);
+          sprintf(buffer, "baro raw %ld raw alt %d pad alt %d\n", baro_s.p, (int)baro_raw_alt, (int)baro_pad_alt);
+          //swo_printf("%s", buffer);
+          for (char *ptr = buffer; *ptr; ptr++)
+            xQueueSend(mon_log_queue_handle, ptr, 0);
+          sprintf(buffer, "baro alt %d vel %d\n", (int)baro_alt, (int)baro_vel);
+          //swo_printf("%s", buffer);
+          for (char *ptr = buffer; *ptr; ptr++)
+            xQueueSend(mon_log_queue_handle, ptr, 0);
 
           if (fm_armed && baro_alt > 100) // TODO parameter
           {
