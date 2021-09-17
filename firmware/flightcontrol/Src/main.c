@@ -85,7 +85,8 @@ typedef enum
   FM_STATE_ASCENT_2,
   FM_STATE_ASCENT_3,
   FM_STATE_DESCENT_1,
-  FM_STATE_DESCENT_2
+  FM_STATE_DESCENT_2,
+  FM_STATE_ERROR
 } fm_state_t;
 
 typedef enum
@@ -286,6 +287,8 @@ FIL mon_log;
 
 struct ms56xx baro;
 uint8_t baro_cal_valid = 0;
+uint8_t baro_cal_crc_error = 0;
+uint8_t baro_error = 0;
 
 uint8_t log_status = 0;
 uint16_t log_index = 0;
@@ -1607,6 +1610,7 @@ void StartSensorTask(void const * argument)
   }
 
   baro_cal_valid = 1;
+  baro_error = 0;
 
   if (ms56xx_check_prom_crc(&baro))
   {
@@ -1614,6 +1618,7 @@ void StartSensorTask(void const * argument)
   }
   else
   {
+    baro_cal_crc_error = 1;
     swo_printf("CRC check failed\n");
   }
 
@@ -1746,8 +1751,19 @@ void StartSensorTask(void const * argument)
 
         ms56xx_convert_2(&baro, &baro_s.p, &baro_s.temp);
 
+        if (baro_s.raw_p == 0 || baro_s.raw_p == 0x00ffffff || baro_s.raw_temp == 0 || baro_s.raw_temp == 0x00ffffff)
+        {
+          // invalid sensor data
+          if (baro_error < 255)
+            baro_error += 1;
+        }
+        else
+        {
+          baro_error = 0;
+          xQueueSend(baro_mon_queue_handle, &baro_s, 0);
+        }
+
         xQueueSend(baro_log_queue_handle, &baro_s, 0);
-        xQueueSend(baro_mon_queue_handle, &baro_s, 0);
 
         baro_state = 0;
       }
@@ -1938,6 +1954,11 @@ void StartMonitorTask(void const * argument)
       last_baro_s_time = baro_s.time;
     }
 
+    if (baro_cal_crc_error || baro_error > 16)
+    {
+      fm_state = FM_STATE_ERROR;
+    }
+
     // monitor flight status
     switch (fm_state)
     {
@@ -2064,6 +2085,10 @@ void StartMonitorTask(void const * argument)
           for (char *ptr = buffer; *ptr; ptr++)
             xQueueSend(mon_log_queue_handle, ptr, 0);
         }
+        break;
+      case FM_STATE_ERROR:
+        // error state, do nothing
+
         break;
     }
 
