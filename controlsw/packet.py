@@ -280,8 +280,12 @@ class FlightStatusPacket(Packet):
         super(FlightStatusPacket, self).__init__(payload, dest, source, seq, flags, ptype)
 
         self.time = 0
+        self.fm_status = 0
         self.flight_phase = 0
-        self.status_flags = 0
+        self.imu_status = 0
+        self.gpio_status = 0
+        self.log_status = 0
+        self.log_index = 0
         self.baro_pressure = 0
         self.baro_temperature = 0
         self.imu_accel = 0
@@ -291,20 +295,28 @@ class FlightStatusPacket(Packet):
         self.baro_speed = 0
         self.imu_speed = 0
         self.imu_altitude = 0
+        self.apogee_altitude = 0
+        self.apogee_pressure = 0
 
     def build(self):
         self.payload = struct.pack('<l', self.time)
+        self.payload += struct.pack('B', self.fm_status)
         self.payload += struct.pack('B', self.flight_phase)
-        self.payload += struct.pack('B', self.status_flags)
+        self.payload += struct.pack('B', self.imu_status)
+        self.payload += struct.pack('B', self.gpio_status)
+        self.payload += struct.pack('B', self.log_status)
+        self.payload += struct.pack('H', self.log_index)
         self.payload += struct.pack('<l', self.baro_pressure)
-        self.payload += struct.pack('<l', int(self.baro_temperature*1e2))
-        self.payload += struct.pack('<l', int(self.imu_accel)*1e2)
+        self.payload += struct.pack('<h', int(self.baro_temperature*1e2))
+        self.payload += struct.pack('<h', int(self.imu_accel)*1e2)
         self.payload += struct.pack('<l', int(self.baro_raw_altitude*1e2))
         self.payload += struct.pack('<l', int(self.baro_altitude*1e2))
         self.payload += struct.pack('<l', int(self.baro_pad_altitude*1e2))
         self.payload += struct.pack('<l', int(self.baro_speed*1e2))
         self.payload += struct.pack('<l', int(self.imu_speed*1e2))
         self.payload += struct.pack('<l', int(self.imu_altitude*1e2))
+        self.payload += struct.pack('<l', int(self.apogee_altitude*1e2))
+        self.payload += struct.pack('<l', self.apogee_pressure)
 
         return super(FlightStatusPacket, self).build()
 
@@ -313,16 +325,22 @@ class FlightStatusPacket(Packet):
             super(FlightStatusPacket, self).parse(data)
 
         self.time = struct.unpack_from('<l', self.payload, 0)[0]
-        self.flight_phase = struct.unpack_from('B', self.payload, 4)[0]
-        self.status_flags = struct.unpack_from('B', self.payload, 5)[0]
-        self.baro_pressure = struct.unpack_from('<l', self.payload, 6)[0]
-        self.baro_temperature = struct.unpack_from('<l', self.payload, 10)[0] / 1e2
-        self.imu_accel = struct.unpack_from('<l', self.payload, 14)[0] / 1e2
-        self.baro_raw_altitude = struct.unpack_from('<l', self.payload, 18)[0] / 1e2
-        self.baro_altitude = struct.unpack_from('<l', self.payload, 22)[0] / 1e2
-        self.baro_pad_altitude = struct.unpack_from('<l', self.payload, 26)[0] / 1e2
-        self.baro_speed = struct.unpack_from('<l', self.payload, 30)[0] / 1e2
-        self.imu_speed = struct.unpack_from('<l', self.payload, 34)[0] / 1e2
-        self.imu_altitude = struct.unpack_from('<l', self.payload, 38)[0] / 1e2
+        self.fm_status = struct.unpack_from('B', self.payload, 4)[0]
+        self.flight_phase = struct.unpack_from('B', self.payload, 5)[0]
+        self.imu_status = struct.unpack_from('B', self.payload, 6)[0]
+        self.gpio_status = struct.unpack_from('B', self.payload, 7)[0]
+        self.log_status = struct.unpack_from('B', self.payload, 8)[0]
+        self.log_index = struct.unpack_from('H', self.payload, 9)[0]
+        self.baro_pressure = struct.unpack_from('<l', self.payload, 11)[0]
+        self.baro_temperature = struct.unpack_from('<h', self.payload, 15)[0] / 1e2
+        self.imu_accel = struct.unpack_from('<h', self.payload, 17)[0] / 1e2
+        self.baro_raw_altitude = struct.unpack_from('<l', self.payload, 19)[0] / 1e2
+        self.baro_altitude = struct.unpack_from('<l', self.payload, 23)[0] / 1e2
+        self.baro_pad_altitude = struct.unpack_from('<l', self.payload, 27)[0] / 1e2
+        self.baro_speed = struct.unpack_from('<l', self.payload, 31)[0] / 1e2
+        self.imu_speed = struct.unpack_from('<l', self.payload, 35)[0] / 1e2
+        self.imu_altitude = struct.unpack_from('<l', self.payload, 39)[0] / 1e2
+        self.apogee_altitude = struct.unpack_from('<l', self.payload, 43)[0] / 1e2
+        self.apogee_pressure = struct.unpack_from('<l', self.payload, 47)[0]
 
 register(FlightStatusPacket, 0xf0)

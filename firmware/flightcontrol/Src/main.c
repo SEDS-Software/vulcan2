@@ -2154,57 +2154,91 @@ void StartMonitorTask(void const * argument)
 
       msg.ptype   = 0xf0;
       msg.len     = 0;
+      // time
       l = osKernelSysTick();
       msg.data[msg.len++] = l & 0xff;
       msg.data[msg.len++] = (l >> 8) & 0xff;
       msg.data[msg.len++] = (l >> 16) & 0xff;
       msg.data[msg.len++] = (l >> 24) & 0xff;
-      msg.data[msg.len++] = fm_state;
+      // FM status
       l = 0;
       if (fm_armed) l |= (1 << 0);
-      if (log_status) l |= (1 << 1);
-      if (HAL_GPIO_ReadPin(BACKUP_SENSE_GPIO_Port, BACKUP_SENSE_Pin)) l |= (1 << 4);
-      if (HAL_GPIO_ReadPin(MAIN_SENSE_GPIO_Port, MAIN_SENSE_Pin)) l |= (1 << 5);
       msg.data[msg.len++] = l;
-      msg.data[msg.len++] = baro_s.p & 0xff;
-      msg.data[msg.len++] = (baro_s.p >> 8) & 0xff;
-      msg.data[msg.len++] = (baro_s.p >> 16) & 0xff;
-      msg.data[msg.len++] = (baro_s.p >> 24) & 0xff;
-      msg.data[msg.len++] = baro_s.temp & 0xff;
-      msg.data[msg.len++] = (baro_s.temp >> 8) & 0xff;
-      msg.data[msg.len++] = (baro_s.temp >> 16) & 0xff;
-      msg.data[msg.len++] = (baro_s.temp >> 24) & 0xff;
-      l = imu_accel * 100;
+      msg.data[msg.len++] = fm_state;
+      // IMU status
+      l = 0;
+      if (baro_error) l |= (1 << 0);
+      if (baro_cal_crc_error) l |= (1 << 1);
+      msg.data[msg.len++] = l;
+      // GPIO status
+      l = 0;
+      if (HAL_GPIO_ReadPin(BACKUP_SENSE_GPIO_Port, BACKUP_SENSE_Pin)) l |= (1 << 0);
+      if (HAL_GPIO_ReadPin(MAIN_SENSE_GPIO_Port, MAIN_SENSE_Pin)) l |= (1 << 1);
+      msg.data[msg.len++] = l;
+      // Logging status
+      if (log_status) l |= (1 << 0);
+      msg.data[msg.len++] = l;
+      l = log_index;
+      msg.data[msg.len++] = l & 0xff;
+      msg.data[msg.len++] = (l >> 8) & 0xff;
+      // Barometer pressure
+      l = baro_s.p;
       msg.data[msg.len++] = l & 0xff;
       msg.data[msg.len++] = (l >> 8) & 0xff;
       msg.data[msg.len++] = (l >> 16) & 0xff;
       msg.data[msg.len++] = (l >> 24) & 0xff;
+      // Barometer temperature
+      l = baro_s.temp;
+      msg.data[msg.len++] = l & 0xff;
+      msg.data[msg.len++] = (l >> 8) & 0xff;
+      // IMU acceleration
+      l = imu_accel * 100;
+      msg.data[msg.len++] = l & 0xff;
+      msg.data[msg.len++] = (l >> 8) & 0xff;
+      // Barometer raw altitude
       l = baro_raw_alt * 100;
       msg.data[msg.len++] = l & 0xff;
       msg.data[msg.len++] = (l >> 8) & 0xff;
       msg.data[msg.len++] = (l >> 16) & 0xff;
       msg.data[msg.len++] = (l >> 24) & 0xff;
+      // Barometer altitude
       l = baro_alt * 100;
       msg.data[msg.len++] = l & 0xff;
       msg.data[msg.len++] = (l >> 8) & 0xff;
       msg.data[msg.len++] = (l >> 16) & 0xff;
       msg.data[msg.len++] = (l >> 24) & 0xff;
+      // Barometer pad altitude
       l = baro_pad_alt * 100;
       msg.data[msg.len++] = l & 0xff;
       msg.data[msg.len++] = (l >> 8) & 0xff;
       msg.data[msg.len++] = (l >> 16) & 0xff;
       msg.data[msg.len++] = (l >> 24) & 0xff;
+      // Barometer velocity
       l = baro_vel * 100;
       msg.data[msg.len++] = l & 0xff;
       msg.data[msg.len++] = (l >> 8) & 0xff;
       msg.data[msg.len++] = (l >> 16) & 0xff;
       msg.data[msg.len++] = (l >> 24) & 0xff;
+      // IMU velocity
       l = imu_vel * 100;
       msg.data[msg.len++] = l & 0xff;
       msg.data[msg.len++] = (l >> 8) & 0xff;
       msg.data[msg.len++] = (l >> 16) & 0xff;
       msg.data[msg.len++] = (l >> 24) & 0xff;
+      // IMU altitude
       l = imu_alt * 100;
+      msg.data[msg.len++] = l & 0xff;
+      msg.data[msg.len++] = (l >> 8) & 0xff;
+      msg.data[msg.len++] = (l >> 16) & 0xff;
+      msg.data[msg.len++] = (l >> 24) & 0xff;
+      // Apogee altitude
+      l = apogee_alt * 100;
+      msg.data[msg.len++] = l & 0xff;
+      msg.data[msg.len++] = (l >> 8) & 0xff;
+      msg.data[msg.len++] = (l >> 16) & 0xff;
+      msg.data[msg.len++] = (l >> 24) & 0xff;
+      // Pressure at apogee
+      l = apogee_p;
       msg.data[msg.len++] = l & 0xff;
       msg.data[msg.len++] = (l >> 8) & 0xff;
       msg.data[msg.len++] = (l >> 16) & 0xff;
