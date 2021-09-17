@@ -2830,6 +2830,11 @@ void StartMessageHandlerTask(void const * argument)
               // set flight monitor arm state command
               fm_armed = msg.data[4];
               break;
+            case 0x000100F0:
+              // restart logging
+              if (msg.data[4])
+                log_status = 0;
+              break;
           }
         }
         else if (msg.ptype == MSG_TYPE_DIO_SET_BIT)
